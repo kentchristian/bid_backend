@@ -9,7 +9,17 @@ class UserAdminForm(forms.ModelForm):
         model = User
         fields = "__all__"  # include all fields including tenant and role
 
+# Admins for Tenant and Role with search_fields
+@admin.register(Tenant)
+class TenantAdmin(admin.ModelAdmin):
+    search_fields = ["name"]  # <-- required for autocomplete
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    search_fields = ["name"]  # <-- required for autocomplete
+
 # Custom UserAdmin
+@admin.register(User)
 class UserAdmin(BaseUserAdmin):
     form = UserAdminForm  # use custom form
     ordering = ["email"]
@@ -18,11 +28,12 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ["email", "name"]
 
     # Fields when editing an existing user
+    readonly_fields = ("created_at", "updated_at", "deleted_at")  # make timestamps read-only
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal Info", {"fields": ("name", "tenant", "role")}),
         ("Permissions", {"fields": ("is_staff", "is_superuser", "is_active", "groups", "user_permissions")}),
-        ("Important dates", {"fields": ("last_login", "created_at", "updated_at")}),
+        ("Important dates", {"fields": ("created_at", "updated_at", "deleted_at")}),
     )
 
     # Fields when adding a new user
@@ -33,8 +44,4 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    autocomplete_fields = ["tenant", "role"]  # optional if you want search dropdowns for large tables
-
-admin.site.register(User)
-admin.site.register(Tenant)
-admin.site.register(Role)
+    autocomplete_fields = ["tenant", "role"]  # now works properly
