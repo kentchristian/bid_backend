@@ -23,10 +23,6 @@ db.sqlite3
 *.egg-info/
 *.egg
 
-# Django migrations (optional, often you include them)
-**/migrations/*.pyc
-**/migrations/*.py
-**/migrations/__pycache__/
 
 # If you want to ignore all migrations but keep __init__.py
 # **/migrations/*
