@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'accounts',
     'audit',
     'storefront',
+    'api',
 ]
 
 MIDDLEWARE = [
