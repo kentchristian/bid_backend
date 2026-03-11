@@ -1,0 +1,70 @@
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+db.sqlite3
+*.db
+*.DS_Store
+*.swp
+*.swo
+*.egg-info/
+*.egg
+
+# Django migrations (optional, often you include them)
+**/migrations/*.pyc
+**/migrations/*.py
+**/migrations/__pycache__/
+
+# If you want to ignore all migrations but keep __init__.py
+# **/migrations/*
+# !**/migrations/__init__.py
+
+# Pytest / test cache
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+pytestdebug.log
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Static files (collectstatic)
+staticfiles/
+
+# Media files (uploads)
+media/
+
+# Others
+pip-log.txt
+pip-delete-this-directory.txt
