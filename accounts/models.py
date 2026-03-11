@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 import uuid
 from django.db import models
-# ===== TENANT MODEL =====
+# ===== TENANT MODEL ===== # GLobal
 class Tenant(models.Model):
     PLAN_CHOICES = [
         ('free', 'Free'),
@@ -19,7 +19,7 @@ class Tenant(models.Model):
         return self.name
 
 
-# ===== ROLE MODEL =====
+# ===== ROLE MODEL ===== # Tenant-specific
 class Role(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Admin'),
@@ -88,7 +88,7 @@ class UserManager(BaseUserManager):
 
 
 
-# ===== USER MODEL =====
+# ===== USER MODEL ===== # Tenant-specific
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey("Tenant", on_delete=models.CASCADE, null=True, blank=True, related_name="users")
