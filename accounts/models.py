@@ -39,9 +39,53 @@ class Role(models.Model):
 # ===== PERMISSIONS =====
 class Permission(models.Model):
     PERMISSION_CHOICES = [
-        ('view_sales', 'View Sales'),
-        ('edit_inventory', 'Edit Inventory'),
-        ('delete_user', 'Delete User'),
+        # Tenant
+        ("view_tenant", "View Tenant"),
+        ("create_tenant", "Create Tenant"),
+        ("edit_tenant", "Edit Tenant"),
+        ("delete_tenant", "Delete Tenant"),
+
+        # Role
+        ("view_role", "View Role"),
+        ("create_role", "Create Role"),
+        ("edit_role", "Edit Role"),
+        ("delete_role", "Delete Role"),
+
+        # Permission
+        ("view_permission", "View Permission"),
+        ("create_permission", "Create Permission"),
+        ("edit_permission", "Edit Permission"),
+        ("delete_permission", "Delete Permission"),
+
+        # RolePermission
+        ("view_role_permission", "View Role Permission"),
+        ("create_role_permission", "Create Role Permission"),
+        ("edit_role_permission", "Edit Role Permission"),
+        ("delete_role_permission", "Delete Role Permission"),
+
+        # User
+        ("view_user", "View User"),
+        ("create_user", "Create User"),
+        ("edit_user", "Edit User"),
+        ("delete_user", "Delete User"),
+
+        # Sale
+        ("view_sale", "View Sale"),
+        ("create_sale", "Create Sale"),
+        ("edit_sale", "Edit Sale"),
+        ("delete_sale", "Delete Sale"),
+
+        # Inventory
+        ("view_inventory", "View Inventory"),
+        ("create_inventory", "Create Inventory"),
+        ("edit_inventory", "Edit Inventory"),
+        ("delete_inventory", "Delete Inventory"),
+
+        # ActivityLog (often view‑only, but CRUD listed for completeness)
+        ("view_activity_log", "View Activity Log"),
+        ("create_activity_log", "Create Activity Log"),
+        ("edit_activity_log", "Edit Activity Log"),
+        ("delete_activity_log", "Delete Activity Log"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
