@@ -1,6 +1,5 @@
 # api/auth_views.py
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import PasswordResetForm
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework.views import APIView
@@ -8,7 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 
-from .serializers import SignupSerializer, LoginSerializer, PasswordResetSerializer
+from .serializers import SignupSerializer, LoginSerializer
 
 class SignupView(GenericAPIView):
     permission_classes = [permissions.AllowAny]
@@ -43,13 +42,15 @@ class LogoutView(APIView):
 
 
 
-# not yet used 
-class PasswordResetView(GenericAPIView):
-    permission_classes = [permissions.AllowAny]
-    serializer_class = PasswordResetSerializer
+# # not yet used 
+# class PasswordResetView(GenericAPIView):
+#     permission_classes = [permissions.AllowAny]
+#     serializer_class = PasswordResetSerializer
 
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        serializer.save(request=request)
-        return Response({"message": "Password reset email sent"}, status=status.HTTP_200_OK)
+#     def post(self, request):
+#         serializer = self.get_serializer(data=request.data, context={"request": request})
+#         serializer.is_valid(raise_exception=True)
+#         serializer.save(request=request)
+#         return Response({"message": "Password reset email sent"}, status=status.HTTP_200_OK)
+
+

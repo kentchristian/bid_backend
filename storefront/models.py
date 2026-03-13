@@ -19,14 +19,28 @@ class Sale(models.Model):
         ]
 
 
+class Category(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        unique_together = ('tenant', 'name')
+    
+    def __str__(self):
+        return self.name
+
 # ===== INVENTORY =====
 class Inventory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     product_name = models.CharField(max_length=255)
     stock_quantity = models.IntegerField()
     reorder_threshold = models.IntegerField()
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
     class Meta:
         indexes = [
