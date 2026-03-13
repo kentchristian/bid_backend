@@ -44,16 +44,16 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
-class PasswordResetSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+# class PasswordResetSerializer(serializers.Serializer):
+#     email = serializers.EmailField()
 
-    def validate_email(self, value):
-        self._form = PasswordResetForm(data={"email": value})
-        if not self._form.is_valid():
-            raise serializers.ValidationError("Invalid email")
-        return value
+#     def validate_email(self, value):
+#         self._form = PasswordResetForm(data={"email": value})
+#         if not self._form.is_valid():
+#             raise serializers.ValidationError("Invalid email")
+#         return value
 
-    def save(self, request):
-        self._form.save(request=request, use_https=request.is_secure())
+#     def save(self, request):
+#         self._form.save(request=request, use_https=request.is_secure())
 
 
