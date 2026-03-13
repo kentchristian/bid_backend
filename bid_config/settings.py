@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'storefront',
     'api',
     'core',
+    'auth.apps.AuthConfig',
 ]
 
 MIDDLEWARE = [
@@ -124,11 +125,16 @@ AUTH_USER_MODEL = "accounts.User"
 
 # DRF defaults (override per-view when needed)
 REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.BasicAuthentication",
     ],
 }
+
 
 
 # Static files (CSS, JavaScript, Images)
