@@ -25,6 +25,16 @@ DEBUG = os.getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = []
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True # Returns the cookies in response
+
 
 # Application definition
 
@@ -42,9 +52,11 @@ INSTALLED_APPS = [
     'api',
     'core',
     'auth.apps.AuthConfig',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
