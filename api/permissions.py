@@ -24,3 +24,6 @@ class RolePermissionRequired(BasePermission):
         return RolePermission.objects.filter(
             role=user.role, permission__name=required
         ).exists()
+
+
+

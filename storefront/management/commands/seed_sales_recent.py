@@ -1,5 +1,4 @@
 import random
-import uuid
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 
@@ -65,19 +64,19 @@ class Command(BaseCommand):
                         )
                     )
 
-                    def build_sale(sold_at):
-                        quantity = random.randint(1, 10)
-                        unit_price = Decimal(random.randint(199, 9999)) / Decimal("100")
-                        total_price = (unit_price * quantity).quantize(Decimal("0.01"))
-                        return Sale(
-                            tenant=tenant,
-                            product_id=uuid.uuid4(),
-                            quantity=quantity,
-                            unit_price=unit_price,
-                            total_price=total_price,
-                            sold_at=sold_at,
-                            created_by=created_by,
-                        )
+                def build_sale(sold_at, inventory):
+                    quantity = random.randint(1, 10)
+                    unit_price = inventory.unit_price
+                    total_price = (unit_price * quantity).quantize(Decimal("0.01"))
+                    return Sale(
+                        tenant=tenant,
+                        inventory=inventory,
+                        quantity=quantity,
+                        unit_price=unit_price,
+                        total_price=total_price,
+                        sold_at=sold_at,
+                        created_by=created_by,
+                    )
 
                 max_per_day = max(1, per_tenant)
                 today_count = random.randint(1, max_per_day)
@@ -90,18 +89,20 @@ class Command(BaseCommand):
                     sold_at_today = timezone.make_aware(
                         datetime.combine(today, random_time())
                     )
-                    sales.append(build_sale(sold_at_today))
+                    sales.append(build_sale(sold_at_today, random.choice(inventories)))
 
                 for _ in range(yesterday_count):
                     sold_at_yesterday = timezone.make_aware(
                         datetime.combine(yesterday, random_time())
                     )
-                    sales.append(build_sale(sold_at_yesterday))
+                    sales.append(
+                        build_sale(sold_at_yesterday, random.choice(inventories))
+                    )
 
                 Inventory.objects.bulk_create(inventories)
                 Sale.objects.bulk_create(sales)
 
             self.stdout.write(
                 f"Seeded tenant '{tenant.name}' with {per_tenant} inventory rows and "
-                f"{per_tenant * 2} sales rows (today+yesterday)."
+                f"{len(sales)} sales rows (today+yesterday)."
             )

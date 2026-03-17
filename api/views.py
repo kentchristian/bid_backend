@@ -8,7 +8,8 @@ from .permissions import RolePermissionRequired
 
 
 # import service
-from .services.sales_service import get_total_revenue
+from .services.sales_service import get_total_revenue, get_total_units_sold
+from .services.inventory_service import get_items_below_threshold
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -40,6 +41,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
         # Function Based Permission
         "total_revenue": "view_sale",
+        "total_items": "view_sale",
     }
 
     def perform_create(self, serializer):
@@ -55,6 +57,13 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         data = get_total_revenue(sales)
         return Response(data)
 
+    @action(detail=False, methods=["get"], url_path="total_items")
+    def total_items(self, request):
+        sales = self.get_queryset()
+        data = get_total_units_sold(sales)
+        return Response(data)
+        
+
 
 class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Inventory.objects.all()
@@ -67,6 +76,10 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "update": "edit_inventory",
         "partial_update": "edit_inventory",
         "destroy": "delete_inventory",
+
+
+        #Function Based Permissions
+        "items_below_threshold": "view_inventory"
     }
 
     def perform_create(self, serializer):
@@ -74,6 +87,13 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         if not tenant:
             raise PermissionDenied("Tenant is required.")
         serializer.save(tenant=tenant)
+
+    
+    @action(detail=False, methods=["get"], url_path="items_below_threshold")
+    def items_below_threshold(self, request):
+        inventory = self.get_queryset()
+        data = get_items_below_threshold(inventory)
+        return Response(data)
 
 
 
