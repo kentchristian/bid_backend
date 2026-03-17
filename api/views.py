@@ -7,6 +7,11 @@ from .serializers import InventorySerializer, SaleSerializer
 from .permissions import RolePermissionRequired
 
 
+# import service
+from .services.sales_service import get_total_revenue
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 class TenantScopedQuerysetMixin:
     def get_tenant(self):
         user = self.request.user
@@ -32,6 +37,9 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "update": "edit_sale",
         "partial_update": "edit_sale",
         "destroy": "delete_sale",
+
+        # Function Based Permission
+        "total_revenue": "view_sale",
     }
 
     def perform_create(self, serializer):
@@ -39,6 +47,13 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         if not tenant:
             raise PermissionDenied("Tenant is required.")
         serializer.save(tenant=tenant, created_by=self.request.user)
+
+
+    @action(detail=False, methods=["get"], url_path="total_revenue")
+    def total_revenue(self, request):
+        sales = self.get_queryset()
+        data = get_total_revenue(sales)
+        return Response(data)
 
 
 class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
@@ -59,3 +74,6 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         if not tenant:
             raise PermissionDenied("Tenant is required.")
         serializer.save(tenant=tenant)
+
+
+

@@ -1,0 +1,1 @@
+TRUNCATE TABLE storefront_sale, storefront_inventory RESTART IDENTITY CASCADE;
