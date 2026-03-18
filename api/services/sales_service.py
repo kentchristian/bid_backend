@@ -38,9 +38,28 @@ def get_total_units_sold(sales):
   }
 
 
+def get_sales_trend(sales):
+  today_date = timezone.now().date()
 
+  today_index = today_date.weekday()
+
+  # Days ago on rcent Sunday
+  days_since_sunday = (today_index + 1) % 7
+
+  data = []
+
+  for i in range(7):
+    target_date = today_date + timezone.timedelta(days=(-days_since_sunday + i))
+
+    print(target_date)
+    
+    # Get Sales total within target day 
+    raw_sales = get_total_sales_specific_day(sales, target_date, 'total_price')
+    
+    data.append({
+        "day": target_date.strftime("%a").capitalize(),
+        "sales": raw_sales if raw_sales is not None else 0
+    })
 
   
-  
-
-
+  return data

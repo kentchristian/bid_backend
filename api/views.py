@@ -8,7 +8,9 @@ from .permissions import RolePermissionRequired
 
 
 # import service
-from .services.sales_service import get_total_revenue, get_total_units_sold
+from .services.sales_service import (
+    get_total_revenue, get_total_units_sold, get_sales_trend
+)
 from .services.inventory_service import get_items_below_threshold
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -40,8 +42,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "destroy": "delete_sale",
 
         # Function Based Permission
-        "total_revenue": "view_sale",
-        "total_items": "view_sale",
+        "dashboard_metrics": "view_sale",
     }
 
     def perform_create(self, serializer):
@@ -50,18 +51,16 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             raise PermissionDenied("Tenant is required.")
         serializer.save(tenant=tenant, created_by=self.request.user)
 
-
-    @action(detail=False, methods=["get"], url_path="total_revenue")
-    def total_revenue(self, request):
+    @action(detail=False, methods=["get"], url_path='dashboard_metrics')
+    def dashboard_metrics(self, request):
         sales = self.get_queryset()
-        data = get_total_revenue(sales)
-        return Response(data)
-
-    @action(detail=False, methods=["get"], url_path="total_items")
-    def total_items(self, request):
-        sales = self.get_queryset()
-        data = get_total_units_sold(sales)
-        return Response(data)
+        
+        # Return everything in one dictionary
+        return Response({
+            "total_revenue": get_total_revenue(sales),
+            "total_items": get_total_units_sold(sales),
+            "trend_sales": get_sales_trend(sales)
+        })
         
 
 
