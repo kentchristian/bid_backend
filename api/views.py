@@ -11,7 +11,9 @@ from .permissions import RolePermissionRequired
 from .services.sales_service import (
     get_total_revenue, get_total_units_sold, get_sales_trend
 )
-from .services.inventory_service import get_items_below_threshold
+from .services.inventory_service import (
+    get_items_below_threshold, get_inventory_health
+)
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -78,7 +80,7 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
 
         #Function Based Permissions
-        "items_below_threshold": "view_inventory"
+        "inventory_metrics": "view_inventory"
     }
 
     def perform_create(self, serializer):
@@ -88,11 +90,14 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         serializer.save(tenant=tenant)
 
     
-    @action(detail=False, methods=["get"], url_path="items_below_threshold")
-    def items_below_threshold(self, request):
+    @action(detail=False, methods=["get"], url_path="inventory_metrics")
+    def inventory_metrics(self, request):
         inventory = self.get_queryset()
-        data = get_items_below_threshold(inventory)
-        return Response(data)
+
+        return Response({
+            "items_below_threshold": get_items_below_threshold(inventory),
+            "inventory_health": get_inventory_health(inventory),
+        })
 
 
 

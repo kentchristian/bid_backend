@@ -10,7 +10,7 @@ router.register("sales/dashboard_metrics", SaleViewSet, basename="dashboard_metr
 
 
 router.register("inventory", InventoryViewSet, basename="inventory")
-router.register("inventory/items_below_threshold", InventoryViewSet, basename="items_below_threshold")
+router.register("inventory/inventory_metrics", InventoryViewSet, basename="inventory_metrics")
 
 
 

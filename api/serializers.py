@@ -14,7 +14,7 @@ class SaleSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "tenant",
-            "product_id",
+            "inventory",
             "quantity",
             "unit_price",
             "total_price",
