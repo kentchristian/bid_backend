@@ -112,14 +112,6 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             "inventory_health": get_inventory_health(inventory),
         })
 
-    @action(detail=False, methods=["get"], url_path="warehouse_status_inventory")
-    def warehouse_status_inventory(self, request):
-        inventory = self.get_queryset()
-
-        return Response({
-            "warehouse_stataus_inventory": ""
-        })
-
     
 
 
