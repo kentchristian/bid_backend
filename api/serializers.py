@@ -75,6 +75,7 @@ class MoneyInSalesSerializer(serializers.ModelSerializer):
   class Meta:
     model = Sale
     fields = [
+        'id',
         'tenant',
         'created_by',
         'inventory',

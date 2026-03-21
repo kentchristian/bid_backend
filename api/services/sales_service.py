@@ -66,7 +66,10 @@ def get_sales_trend(sales):
 
 
 def get_money_in_sales(sales):
-  return MoneyInSalesSerializer(sales, many=True).data
+  today = timezone.now().date()
+  today_sales = sales.filter(sold_at__date=today)
+
+  return MoneyInSalesSerializer(today_sales, many=True).data
 
 
 def get_todays_top_hits(sales):
