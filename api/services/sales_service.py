@@ -1,7 +1,7 @@
 
 from django.utils import timezone
 from api.utils.get_total_sales_specific_day import get_total_sales_specific_day
-from api.serializers import MoneyInSalesSerializer, TodaysTopHitsSerializer
+from api.serializers import MoneyInSalesSerializer, TodaysTopHitsSerializer, InventorySerializer
 
 def get_total_revenue(sales):
   #Get the instance query set filtered 
@@ -80,8 +80,15 @@ def get_todays_top_hits(sales):
     '-sold_at',
   )[:3]
 
+
+  def count_items(product_name):
+    product = sales.filter(inventory__product_name=product_name)
+    return product.count()
+  
   data = TodaysTopHitsSerializer(top_3_sales, many=True).data
+
   for index, item in enumerate(data):
         item['rank'] = index + 1 #Add Rank to attribute
-
+        item['count_items'] = count_items(data[index]['inventory']['product_name'])
+        
   return data
