@@ -81,7 +81,7 @@ def get_todays_top_hits(sales):
   )[:3]
 
 
-  def count_items(product_name):
+  def count_product_item(product_name):
     product = sales.filter(inventory__product_name=product_name)
     return product.count()
   
@@ -89,6 +89,6 @@ def get_todays_top_hits(sales):
 
   for index, item in enumerate(data):
         item['rank'] = index + 1 #Add Rank to attribute
-        item['count_items'] = count_items(data[index]['inventory']['product_name'])
+        item['count_product_item'] = count_product_item(data[index]['inventory']['product_name'])
         
   return data

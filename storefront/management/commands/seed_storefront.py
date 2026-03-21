@@ -84,11 +84,13 @@ class Command(BaseCommand):
                         product_name = f"{random.choice(adjectives)} {random.choice(nouns)} {index + 1}"
                         stock_quantity = random.randint(0, 500)
                         reorder_threshold = random.randint(5, 50)
+                        max_quantity = max(stock_quantity, reorder_threshold) + random.randint(20, 200)
                         inventories.append(
                             Inventory(
                                 tenant=tenant,
                                 product_name=product_name,
                                 stock_quantity=stock_quantity,
+                                max_quantity=max_quantity,
                                 reorder_threshold=reorder_threshold,
                             )
                         )

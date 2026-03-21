@@ -22,6 +22,7 @@ class Inventory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     product_name = models.CharField(max_length=255)
     stock_quantity = models.IntegerField()
+    max_quantity = models.IntegerField()
     reorder_threshold = models.IntegerField()
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     updated_at = models.DateTimeField(auto_now=True)

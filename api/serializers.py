@@ -33,6 +33,7 @@ class InventorySerializer(serializers.ModelSerializer):
             "product_name",
             "category",
             "stock_quantity",
+            "max_quantity",
             "reorder_threshold",
             "updated_at",
         ]

@@ -118,12 +118,14 @@ class Command(BaseCommand):
                         reorder_threshold = max(
                             5, int(stock_quantity * rng.choice([0.12, 0.18, 0.25]))
                         )
+                        max_quantity = max(stock_quantity, reorder_threshold) + rng.randint(20, 180)
 
                         inventory = Inventory.objects.create(
                             tenant=tenant,
                             category=category,
                             product_name=product_name,
                             stock_quantity=stock_quantity,
+                            max_quantity=max_quantity,
                             reorder_threshold=reorder_threshold,
                             unit_price=unit_price,
                         )

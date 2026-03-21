@@ -54,12 +54,16 @@ class Command(BaseCommand):
                 # Inventory count stays per_tenant, but sales count varies by day.
                 for i in range(per_tenant):
                     product_name = f"{random.choice(adjectives)} {random.choice(nouns)} {i + 1}"
+                    stock_quantity = random.randint(10, 200)
+                    reorder_threshold = random.randint(5, 30)
+                    max_quantity = max(stock_quantity, reorder_threshold) + random.randint(20, 150)
                     inventories.append(
                         Inventory(
                             tenant=tenant,
                             product_name=product_name,
-                            stock_quantity=random.randint(10, 200),
-                            reorder_threshold=random.randint(5, 30),
+                            stock_quantity=stock_quantity,
+                            max_quantity=max_quantity,
+                            reorder_threshold=reorder_threshold,
                             unit_price=Decimal(random.randint(199, 9999)) / Decimal("100"),
                         )
                     )
