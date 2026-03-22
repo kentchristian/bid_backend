@@ -33,6 +33,18 @@ class Command(BaseCommand):
             help="Number of tenants to seed (default: all tenants).",
         )
         parser.add_argument(
+            "--year",
+            type=int,
+            default=None,
+            help="Year to seed (requires --month). Defaults to current year.",
+        )
+        parser.add_argument(
+            "--month",
+            type=int,
+            default=None,
+            help="Month (1-12) to seed (requires --year). Defaults to current month.",
+        )
+        parser.add_argument(
             "--seed",
             type=int,
             default=42,
@@ -44,11 +56,18 @@ class Command(BaseCommand):
         sales_total = options["sales_total"]
         tenant_limit = options["tenants"]
         seed = options["seed"]
+        year = options["year"]
+        month = options["month"]
 
         if inventory_total <= 0:
             raise CommandError("--inventory-total must be a positive integer.")
         if sales_total <= 0:
             raise CommandError("--sales-total must be a positive integer.")
+
+        if (year is None) != (month is None):
+            raise CommandError("--year and --month must be provided together.")
+        if month is not None and (month < 1 or month > 12):
+            raise CommandError("--month must be between 1 and 12.")
 
         tenants_qs = Tenant.objects.order_by("created_at")
         if tenant_limit:
@@ -58,7 +77,10 @@ class Command(BaseCommand):
             raise CommandError("No tenants found.")
 
         rng = random.Random(seed)
-        month_start, month_end = self._month_bounds(timezone.localdate())
+        anchor_date = (
+            date(year, month, 1) if year is not None else timezone.localdate()
+        )
+        month_start, month_end = self._month_bounds(anchor_date)
         dates, date_weights = self._build_date_weights(month_start, month_end)
         dayparts = self._dayparts()
         category_defs = self._category_defs()
