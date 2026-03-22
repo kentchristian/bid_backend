@@ -36,7 +36,6 @@ class InventorySerializer(serializers.ModelSerializer):
             "max_quantity",
             "reorder_threshold",
             "updated_at",
-            "unit_price",
         ]
         read_only_fields = ["id", "updated_at"]
 
