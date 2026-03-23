@@ -9,6 +9,14 @@ from rest_framework import status, permissions
 
 from .serializers import SignupSerializer, LoginSerializer
 
+
+# For CSRF
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
+from django.middleware.csrf import get_token
+
+
+
 class SignupView(GenericAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = SignupSerializer
@@ -40,6 +48,15 @@ class LogoutView(APIView):
         return Response({"message": "Logout successfully"}, status=status.HTTP_200_OK)
 
 
+
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class CsrfView(APIView):
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request):
+        return Response({"csrfToken": get_token(request)})
 
 
 # # not yet used 

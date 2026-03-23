@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers
 
 # Load environment variables from .env
 load_dotenv()
@@ -12,28 +13,63 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables based on DJANGO_ENV
-ENVIRONMENT = os.getenv("DJANGO_ENV", "dev")
+ENVIRONMENT = os.getenv("DJANGO_ENV", "prod")
+
 if ENVIRONMENT == "prod":
-    load_dotenv(BASE_DIR / ".env.prod")
+    load_dotenv(BASE_DIR / ".env.prod", override=True)
 else:
-    load_dotenv(BASE_DIR / ".env.dev")
+    load_dotenv(BASE_DIR / ".env.dev", override=True)
+
 
 # SECURITY
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG') == 'True'
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "calcareous-inextinguishably-veola.ngrok-free.dev",
+    "localhost",
+    "127.0.0.1",
+    "http://192.168.1.45"
+]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://192.168.1.45:3000",
+    "https://calcareous-inextinguishably-veola.ngrok-free.dev",
+    "https://business-intelligence-management.vercel.app",
+
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://192.168.1.45:3000",
+    "https://calcareous-inextinguishably-veola.ngrok-free.dev",
+    "https://business-intelligence-management.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True # Returns the cookies in response
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
+
+# SESSION_COOKIE_SAMESITE = 'None'
+# SESSION_COOKIE_SECURE = False  # Required if SameSite is 'None'
+# CSRF_COOKIE_SAMESITE = 'None'
+# CSRF_COOKIE_SECURE = False
+
+if ENVIRONMENT == "prod":
+    SESSION_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SAMESITE = 'None'
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+else:
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+
 
 
 # Application definition
