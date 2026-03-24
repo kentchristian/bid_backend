@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 
 from .serializers import SignupSerializer, LoginSerializer
-
+from api.serializers import UserSerializer
 
 # For CSRF
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -37,15 +37,26 @@ class LoginView(GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        login(request, serializer.validated_data["user"])
-        return Response({"message": "Login successfully"}, status=status.HTTP_200_OK)
+
+        user = serializer.validated_data["user"]
+        login(request, user)
+
+        user_data = UserSerializer(user).data
+
+        return Response({"message": "Login successfully", "user_data": user_data }, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         logout(request)
-        return Response({"message": "Logout successfully"}, status=status.HTTP_200_OK)
+        response = Response({"message": "Logout successfully"}, status=status.HTTP_200_OK)
+
+        # Explicitly Clear Cookies
+        response.delete_cookie('sessionid')
+        response.delete_cookie('csrftoken') 
+        
+        return response
 
 
 
