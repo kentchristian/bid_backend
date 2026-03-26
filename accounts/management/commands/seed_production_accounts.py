@@ -53,11 +53,20 @@ class Command(BaseCommand):
                 self._reset_current_tenant()
 
     def _build_config(self, index, options):
+        tenant_names = {
+            1: "Business Intelligence Management",
+            2: "Business Test Tenant",
+        }
+        default_passwords = {
+            1: "Admin123!",
+            2: "Test123!",
+        }
         defaults = {
-            "name": f"Tenant {index}",
+            "name": tenant_names.get(index, f"Tenant {index}"),
             "plan": "pro",
             "admin_name": f"Tenant {index} Admin",
             "admin_email": f"tenant{index}.admin@example.com",
+            "admin_password": default_passwords.get(index, "ChangeMe123!"),
         }
 
         name = self._resolve_value(
@@ -89,15 +98,8 @@ class Command(BaseCommand):
         admin_password = self._resolve_value(
             options[f"tenant_{index}_admin_password"],
             f"SEED_TENANT_{index}_ADMIN_PASSWORD",
-            required=True,
+            default=defaults["admin_password"],
         )
-
-        if not admin_password:
-            raise CommandError(
-                f"Missing admin password for tenant {index}. "
-                f"Set --tenant-{index}-admin-password or "
-                f"SEED_TENANT_{index}_ADMIN_PASSWORD."
-            )
 
         return {
             "index": index,

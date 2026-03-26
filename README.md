@@ -1,2 +1,18 @@
 DOCKER -- production select file
 docker compose --env-file .env.prod up
+
+Seeders (run after migrations, in order)
+docker compose --env-file .env.prod exec backend python manage.py seed_permissions
+docker compose --env-file .env.prod exec backend python manage.py seed_production_accounts
+docker compose --env-file .env.prod exec backend python manage.py seed_role_permissions
+
+Sample data seeders (run after core seeders, any order)
+docker compose --env-file .env.prod exec backend python manage.py seed_production_month
+docker compose --env-file .env.prod exec backend python manage.py seed_storefront
+docker compose --env-file .env.prod exec backend python manage.py seed_sales_recent
+
+Notes
+seed_role_permissions expects permissions to exist (run seed_permissions first).
+seed_production_accounts requires SEED_TENANT_1_ADMIN_PASSWORD and SEED_TENANT_2_ADMIN_PASSWORD env vars (or pass the flags).
+seed_production_month wraps seed_sales_inventory_month (no need to run both).
+seed_production_accounts defaults admin passwords to Admin123! (tenant 1) and Test123! (tenant 2) if not provided.
