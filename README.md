@@ -29,3 +29,4 @@ docker compose --env-file .env.prod exec worker celery -A bid_config inspect reg
 # RUN THE TEST IN DOCKER
 
 docker compose --env-file .env.prod exec backend pytest
+docker compose --env-file .env.prod exec backend pytest auth/tests/test_login.py
