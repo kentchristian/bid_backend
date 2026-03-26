@@ -1,3 +1,12 @@
+Raw Documentation Planning and Learning notes: 
+[DOCUMENTATION](https://docs.google.com/document/d/1lm-urvtgi0kvx1TILRmogWYFOAwT6IB4sA6JiF9t08g/edit?usp=sharing)
+Raw Weekly Sprint: 
+[SPRINT](url): https://docs.google.com/spreadsheets/d/11tFKn0aQsHmz-CdOrRBYxLLHYuSRU18gk6iSYKiSDsw/edit?usp=sharing
+
+
+
+
+######### 
 DOCKER -- production select file
 docker compose --env-file .env.prod up # to up docker
 docker compose --env-file .env.prod up --build # rebuild when new depencies added
