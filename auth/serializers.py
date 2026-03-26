@@ -1,6 +1,8 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 # from django.contrib.auth.forms import PasswordResetForm
+
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework import serializers
 
 User = get_user_model()
@@ -25,6 +27,7 @@ class SignupSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(
@@ -35,12 +38,26 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         request = self.context.get("request")
-        user = authenticate(request, email=attrs["email"], password=attrs["password"])
-        if not user:
-            raise serializers.ValidationError("Invalid credentials")
-        if not user.is_active:
-            raise serializers.ValidationError("User is inactive")
-        attrs["user"] = user
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        if email and password:
+           
+            user = authenticate(request, username=email, password=password)
+
+            if not user:
+                # 401 Unauthorized: The "Who are you?" check
+                raise AuthenticationFailed("Invalid credentials")
+            
+            if not user.is_active:
+                # 403 Forbidden: The "Are you allowed?" check
+                raise PermissionDenied("User account is deactivated")
+
+            attrs["user"] = user
+        else:
+            # 400 Bad Request: The "Did you send data?" check
+            raise serializers.ValidationError("Both email and password are required")
+
         return attrs
 
 

@@ -1,5 +1,6 @@
 DOCKER -- production select file
-docker compose --env-file .env.prod up
+docker compose --env-file .env.prod up # to up docker
+docker compose --env-file .env.prod up --build # rebuild when new depencies added
 
 Seeders (run after migrations, in order)
 docker compose --env-file .env.prod exec backend python manage.py seed_permissions
@@ -24,3 +25,7 @@ docker compose --env-file .env.prod exec redis redis-cli ping
 # See Celery Tasks
 
 docker compose --env-file .env.prod exec worker celery -A bid_config inspect registered
+
+# RUN THE TEST IN DOCKER
+
+docker compose --env-file .env.prod exec backend pytest

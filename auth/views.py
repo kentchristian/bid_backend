@@ -9,6 +9,8 @@ from rest_framework import status, permissions
 
 from .serializers import SignupSerializer, LoginSerializer
 from api.serializers import UserSerializer
+from rest_framework.settings import api_settings
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 
 # For CSRF
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -30,20 +32,34 @@ class SignupView(GenericAPIView):
             status=status.HTTP_200_OK,
         )
 
+        
 class LoginView(GenericAPIView):
+    # CRITICAL: This prevents the 'Session/CSRF' check that forces the 403
+    authentication_classes = [BasicAuthentication, SessionAuthentication] 
     permission_classes = [permissions.AllowAny]
     serializer_class = LoginSerializer
 
     def post(self, request):
+        # 1. This triggers the validate() in Serializer.
+        # - 401 if authenticate fails
+        # - 403 if user.is_active is False
+        # - 400 if fields are missing
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-
+        
+        # 2. If it reaches here, the user is valid and active
         user = serializer.validated_data["user"]
+        
+        # Handles the session login for the request
         login(request, user)
 
         user_data = UserSerializer(user).data
+        
+        return Response({
+            "message": "Login successfully", 
+            "user_data": user_data 
+        }, status=status.HTTP_200_OK)
 
-        return Response({"message": "Login successfully", "user_data": user_data }, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
