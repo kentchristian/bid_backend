@@ -16,3 +16,11 @@ seed_role_permissions expects permissions to exist (run seed_permissions first).
 seed_production_accounts requires SEED_TENANT_1_ADMIN_PASSWORD and SEED_TENANT_2_ADMIN_PASSWORD env vars (or pass the flags).
 seed_production_month wraps seed_sales_inventory_month (no need to run both).
 seed_production_accounts defaults admin passwords to Admin123! (tenant 1) and Test123! (tenant 2) if not provided.
+
+# PING REDIS
+
+docker compose --env-file .env.prod exec redis redis-cli ping
+
+# See Celery Tasks
+
+docker compose --env-file .env.prod exec worker celery -A bid_config inspect registered
