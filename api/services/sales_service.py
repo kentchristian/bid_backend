@@ -50,8 +50,6 @@ def get_sales_trend(sales):
 
   for i in range(7):
     target_date = today_date + timezone.timedelta(days=(-days_since_sunday + i))
-
-    print(target_date)
     
     # Get Sales total within target day 
     raw_sales = get_total_sales_specific_day(sales, target_date, 'total_price')

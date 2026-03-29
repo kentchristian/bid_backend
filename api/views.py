@@ -6,6 +6,12 @@ from storefront.models import Inventory, Sale
 from .serializers import InventorySerializer, SaleSerializer
 from .permissions import RolePermissionRequired
 
+# Tenant Cache Helpers
+from .utils.tenant_cache import (
+    set_cache_key,
+    get_tenant_cache,
+    set_tenant_cache,
+)
 
 # import service
 from .services.sales_service import (
@@ -15,6 +21,8 @@ from .services.sales_service import (
     get_money_in_sales,
     get_todays_top_hits
 )
+
+from .services.metrics_service import compute_dashboard_metrics
 from .services.inventory_service import (
     get_items_below_threshold, get_inventory_health
 )
@@ -60,15 +68,24 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path='dashboard_metrics')
     def dashboard_metrics(self, request):
-        sales = self.get_queryset()
+        #TODO Info -- Apply FilterBackground when scaling features, such as search and ordering
+        sales = self.filter_queryset(self.get_queryset())
+
+        tenant_id = request.user.tenant.id
         
-        # Return everything in one dictionary
-        return Response({
-            "total_revenue": get_total_revenue(sales),
-            "total_items": get_total_units_sold(sales),
-            "trend_sales": get_sales_trend(sales),
-            "money_in_sales": get_money_in_sales(sales),
-        })
+        cache_key = set_cache_key("dashboard_metrics", tenant_id)
+        cached = get_tenant_cache(cache_key)
+
+        if cached is not None:
+            return Response(cached) # Return cache if it hits match
+        
+        
+
+        data = compute_dashboard_metrics(sales)
+        set_tenant_cache(cache_key, data, 180) # Hold Cache for 3 Minutes
+        
+        return Response(data)
+       
     
     @action(detail=False, methods=["get"], url_path='todays_top_hits')
     def todays_top_hits(self, request):
