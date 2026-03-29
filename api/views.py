@@ -15,17 +15,14 @@ from .utils.tenant_cache import (
 
 # import service
 from .services.sales_service import (
-    get_total_revenue, 
-    get_total_units_sold, 
-    get_sales_trend, 
-    get_money_in_sales,
     get_todays_top_hits
 )
 
-from .services.metrics_service import compute_dashboard_metrics
-from .services.inventory_service import (
-    get_items_below_threshold, get_inventory_health
+from .services.metrics_service import (
+    compute_dashboard_metrics,
+    compute_inventory_metrics
 )
+
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -121,12 +118,22 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     
     @action(detail=False, methods=["get"], url_path="inventory_metrics")
     def inventory_metrics(self, request):
-        inventory = self.get_queryset()
+        #TODO Info -- Apply FilterBackground when scaling features, such as search and ordering
+        inventory = self.filter_queryset(self.get_queryset())
 
-        return Response({
-            "items_below_threshold": get_items_below_threshold(inventory),
-            "inventory_health": get_inventory_health(inventory),
-        })
+        tenant_id = request.user.tenant.id
+        
+        cache_key = set_cache_key("inventory_metrics", tenant_id)
+        cached = get_tenant_cache(cache_key)
+
+        if cached is not None:
+            return Response(cached) # Return cache if it hits match
+        data = compute_inventory_metrics(inventory)
+        set_tenant_cache(cache_key, data, 60) # Hold Data for 30 seconds
+        #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
+        
+        return Response(data)
+       
 
     
 

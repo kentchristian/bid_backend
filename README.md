@@ -37,7 +37,9 @@ Raw Weekly Sprint:
 
 # Check Key Exists in Redis
 
-- docker compose --env-file .env.prod exec redis redis-cli KEYS "_dashboard_metrics:_"
+- [docker compose --env-file .env.prod exec redis redis-cli KEYS "*dashboard_metrics:*"]
+- [docker compose --env-file .env.prod exec redis redis-cli KEYS "*inventory_metrics:*"]
+- [docker compose --env-file .env.prod exec redis redis-cli KEYS "*_metrics:*"]
 
 # See Celery Tasks
 
