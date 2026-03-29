@@ -79,10 +79,9 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         if cached is not None:
             return Response(cached) # Return cache if it hits match
         
-        
-
         data = compute_dashboard_metrics(sales)
-        set_tenant_cache(cache_key, data, 180) # Hold Cache for 3 Minutes
+        set_tenant_cache(cache_key, data, 60) # Hold Data for 30 seconds
+        #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
         
         return Response(data)
        
