@@ -50,6 +50,24 @@ class Command(BaseCommand):
             default=42,
             help="Random seed for deterministic data generation (default: 42).",
         )
+        parser.add_argument(
+            "--low-stock-ratio",
+            type=float,
+            default=0.08,
+            help=(
+                "Fraction of inventory items that should end below the reorder threshold "
+                "(default: 0.08)."
+            ),
+        )
+        parser.add_argument(
+            "--out-of-stock-ratio",
+            type=float,
+            default=0.04,
+            help=(
+                "Fraction of inventory items that should end at zero stock "
+                "(default: 0.04)."
+            ),
+        )
 
     def handle(self, *args, **options):
         inventory_total = options["inventory_total"]
@@ -58,6 +76,8 @@ class Command(BaseCommand):
         seed = options["seed"]
         year = options["year"]
         month = options["month"]
+        low_stock_ratio = options["low_stock_ratio"]
+        out_of_stock_ratio = options["out_of_stock_ratio"]
 
         if inventory_total <= 0:
             raise CommandError("--inventory-total must be a positive integer.")
@@ -68,6 +88,10 @@ class Command(BaseCommand):
             raise CommandError("--year and --month must be provided together.")
         if month is not None and (month < 1 or month > 12):
             raise CommandError("--month must be between 1 and 12.")
+        if low_stock_ratio < 0 or out_of_stock_ratio < 0:
+            raise CommandError("Stock ratios must be zero or positive.")
+        if low_stock_ratio > 1 or out_of_stock_ratio > 1:
+            raise CommandError("Stock ratios must be between 0 and 1.")
 
         tenants_qs = Tenant.objects.order_by("created_at")
         if tenant_limit:
@@ -118,6 +142,17 @@ class Command(BaseCommand):
                     inventory_items = []
                     stock_remaining = {}
                     sold_by_inventory = {}
+                    target_remaining = {}
+
+                    low_count, out_count = self._allocate_special_counts(
+                        inventory_target, low_stock_ratio, out_of_stock_ratio
+                    )
+                    special_indices = list(range(inventory_target))
+                    rng.shuffle(special_indices)
+                    out_indices = set(special_indices[:out_count])
+                    low_indices = set(
+                        special_indices[out_count : out_count + low_count]
+                    )
 
                     for i in range(inventory_target):
                         cat_def = category_defs[i % len(category_defs)]
@@ -136,11 +171,22 @@ class Command(BaseCommand):
                         product_name = f"{brand} {item} {variant} {size} {sku}"
 
                         unit_price = self._price_for(cat_def, size_index, rng)
-                        stock_quantity = rng.randint(*cat_def["stock_range"])
+                        base_stock = rng.randint(*cat_def["stock_range"])
+                        max_quantity = base_stock + rng.randint(20, 180)
                         reorder_threshold = max(
-                            5, int(stock_quantity * rng.choice([0.12, 0.18, 0.25]))
+                            5, int(max_quantity * rng.choice([0.12, 0.18, 0.25]))
                         )
-                        max_quantity = max(stock_quantity, reorder_threshold) + rng.randint(20, 180)
+                        if max_quantity > 1:
+                            reorder_threshold = min(reorder_threshold, max_quantity - 1)
+                        is_out = i in out_indices
+                        is_low = i in low_indices
+                        stock_quantity, desired_remaining = self._stock_plan(
+                            rng=rng,
+                            max_quantity=max_quantity,
+                            reorder_threshold=reorder_threshold,
+                            is_low=is_low,
+                            is_out=is_out,
+                        )
 
                         inventory = Inventory.objects.create(
                             tenant=tenant,
@@ -154,6 +200,8 @@ class Command(BaseCommand):
                         inventory_items.append(inventory)
                         stock_remaining[inventory.id] = stock_quantity
                         sold_by_inventory[inventory.id] = 0
+                        if desired_remaining is not None:
+                            target_remaining[inventory.id] = desired_remaining
 
                     if not inventory_items:
                         self.stdout.write(
@@ -161,21 +209,85 @@ class Command(BaseCommand):
                         )
                         continue
 
+                    total_stock_units = sum(stock_remaining.values())
+                    if sales_target > total_stock_units:
+                        self.stdout.write(
+                            "Requested sales rows exceed available stock units; "
+                            f"capping sales rows to {total_stock_units}."
+                        )
+                        sales_target = total_stock_units
+
                     inventory_weights = [
                         category_popularity.get(inv.category.name, 1.0)
                         for inv in inventory_items
                     ]
 
                     sales = []
-                    attempts = 0
-                    max_attempts = max(sales_target * 5, sales_target + 10)
                     tz = timezone.get_current_timezone()
 
+                    def build_sale(inventory, quantity):
+                        sale_date = rng.choices(dates, weights=date_weights, k=1)[0]
+                        sold_time = self._random_time(rng, dayparts)
+                        sold_at = timezone.make_aware(
+                            datetime.combine(sale_date, sold_time), tz
+                        )
+                        unit_price = inventory.unit_price
+                        total_price = (unit_price * quantity).quantize(Decimal("0.01"))
+                        return Sale(
+                            tenant=tenant,
+                            inventory=inventory,
+                            quantity=quantity,
+                            unit_price=unit_price,
+                            total_price=total_price,
+                            sold_at=sold_at,
+                            created_by=created_by,
+                        )
+
+                    locked_ids = set()
+                    for inventory in inventory_items:
+                        if inventory.id not in target_remaining:
+                            continue
+                        desired_remaining = target_remaining[inventory.id]
+                        remaining = stock_remaining.get(inventory.id, 0)
+                        if remaining <= desired_remaining:
+                            locked_ids.add(inventory.id)
+                            continue
+
+                        qty_min, qty_max = category_qty_range.get(
+                            inventory.category.name, (1, 4)
+                        )
+                        while remaining > desired_remaining:
+                            max_sell = remaining - desired_remaining
+                            qty_cap = min(qty_max, max_sell)
+                            if qty_cap <= 0:
+                                break
+                            if qty_cap < qty_min:
+                                quantity = qty_cap
+                            else:
+                                quantity = rng.randint(qty_min, qty_cap)
+                            sales.append(build_sale(inventory, quantity))
+                            remaining -= quantity
+                            sold_by_inventory[inventory.id] = (
+                                sold_by_inventory.get(inventory.id, 0) + quantity
+                            )
+                        stock_remaining[inventory.id] = remaining
+                        locked_ids.add(inventory.id)
+
+                    if len(sales) > sales_target:
+                        self.stdout.write(
+                            "Generated more sales rows than requested to satisfy "
+                            "low/out-of-stock targets."
+                        )
+
+                    attempts = 0
+                    max_attempts = max(sales_target * 6, sales_target + 10)
                     while len(sales) < sales_target and attempts < max_attempts:
                         attempts += 1
                         inventory = rng.choices(
                             inventory_items, weights=inventory_weights, k=1
                         )[0]
+                        if inventory.id in locked_ids:
+                            continue
                         remaining = stock_remaining.get(inventory.id, 0)
                         if remaining <= 0:
                             continue
@@ -192,26 +304,7 @@ class Command(BaseCommand):
                             else rng.randint(qty_min, qty_cap)
                         )
 
-                        sale_date = rng.choices(dates, weights=date_weights, k=1)[0]
-                        sold_time = self._random_time(rng, dayparts)
-                        sold_at = timezone.make_aware(
-                            datetime.combine(sale_date, sold_time), tz
-                        )
-
-                        unit_price = inventory.unit_price
-                        total_price = (unit_price * quantity).quantize(Decimal("0.01"))
-
-                        sales.append(
-                            Sale(
-                                tenant=tenant,
-                                inventory=inventory,
-                                quantity=quantity,
-                                unit_price=unit_price,
-                                total_price=total_price,
-                                sold_at=sold_at,
-                                created_by=created_by,
-                            )
-                        )
+                        sales.append(build_sale(inventory, quantity))
                         stock_remaining[inventory.id] = remaining - quantity
                         sold_by_inventory[inventory.id] = (
                             sold_by_inventory.get(inventory.id, 0) + quantity
@@ -566,6 +659,59 @@ class Command(BaseCommand):
             "Pinecrest",
             "Lakeside",
         ]
+
+    def _allocate_special_counts(self, total, low_ratio, out_ratio):
+        if total <= 0:
+            return 0, 0
+        out_count = int(round(total * out_ratio))
+        low_count = int(round(total * low_ratio))
+
+        if total >= 2:
+            if out_ratio > 0:
+                out_count = max(1, out_count)
+            if low_ratio > 0:
+                low_count = max(1, low_count)
+        elif total == 1:
+            out_count = 1 if out_ratio > 0 else 0
+            low_count = 0
+
+        if out_count + low_count > total:
+            low_count = max(0, total - out_count)
+        if out_count + low_count > total:
+            out_count = max(0, total - low_count)
+
+        return low_count, out_count
+
+    def _stock_plan(self, rng, max_quantity, reorder_threshold, is_low, is_out):
+        if max_quantity <= 0:
+            return 0, 0
+        if reorder_threshold < 1:
+            reorder_threshold = 1
+
+        if is_out:
+            start_max = min(max_quantity, max(3, min(reorder_threshold, 30)))
+            start_min = min(start_max, 1)
+            starting_stock = rng.randint(start_min, start_max)
+            return starting_stock, 0
+
+        if is_low:
+            low_min = min(max_quantity, reorder_threshold + 5)
+            low_max = min(max_quantity, reorder_threshold + 30)
+            if low_min > low_max:
+                low_min = low_max
+            starting_stock = rng.randint(low_min, low_max)
+            if reorder_threshold > 1 and starting_stock > 1:
+                target_remaining = rng.randint(
+                    1, min(reorder_threshold - 1, starting_stock - 1)
+                )
+            else:
+                target_remaining = 0
+            return starting_stock, target_remaining
+
+        healthy_min = max(reorder_threshold + 10, int(max_quantity * 0.6))
+        healthy_min = min(healthy_min, max_quantity)
+        starting_stock = rng.randint(healthy_min, max_quantity)
+        return starting_stock, None
 
     def _set_current_tenant(self, tenant_id):
         if connection.vendor != "postgresql":

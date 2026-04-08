@@ -48,6 +48,24 @@ class Command(BaseCommand):
             default=42,
             help="Random seed for deterministic data generation (default: 42).",
         )
+        parser.add_argument(
+            "--low-stock-ratio",
+            type=float,
+            default=0.08,
+            help=(
+                "Fraction of inventory items that should end below the reorder threshold "
+                "(default: 0.08)."
+            ),
+        )
+        parser.add_argument(
+            "--out-of-stock-ratio",
+            type=float,
+            default=0.04,
+            help=(
+                "Fraction of inventory items that should end at zero stock "
+                "(default: 0.04)."
+            ),
+        )
 
     def handle(self, *args, **options):
         inventory_total = options["inventory_total"]
@@ -56,6 +74,8 @@ class Command(BaseCommand):
         seed = options["seed"]
         year = options["year"]
         month = options["month"]
+        low_stock_ratio = options["low_stock_ratio"]
+        out_of_stock_ratio = options["out_of_stock_ratio"]
 
         if (year is None) != (month is None):
             raise CommandError("--year and --month must be provided together.")
@@ -75,6 +95,8 @@ class Command(BaseCommand):
             seed=seed,
             year=year,
             month=month,
+            low_stock_ratio=low_stock_ratio,
+            out_of_stock_ratio=out_of_stock_ratio,
         )
 
         self.stdout.write(

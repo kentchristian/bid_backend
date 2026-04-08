@@ -37,6 +37,7 @@ class InventorySerializer(serializers.ModelSerializer):
             "max_quantity",
             "reorder_threshold",
             "updated_at",
+            "unit_price",
         ]
         read_only_fields = ["id", "updated_at"]
 
@@ -66,7 +67,8 @@ class ProductSerializer(serializers.ModelSerializer):
       'category',
       'stock_quantity',
       'reorder_threshold',
-      'updated_at'
+      'updated_at',
+      'unit_price',
     ]
 
 class MoneyInSalesSerializer(serializers.ModelSerializer):
