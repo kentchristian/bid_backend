@@ -71,7 +71,10 @@ def get_money_in_sales(sales):
 
 
 def get_todays_top_hits(sales):
-  top_3_sales = sales.order_by(
+  today = timezone.now().date()
+  today_sales = sales.filter(sold_at__date=today)
+
+  top_3_sales = today_sales.order_by(
     '-total_price',
     '-quantity',
     '-unit_price',
