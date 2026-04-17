@@ -17,10 +17,13 @@ from .utils.tenant_cache import (
 from .services.sales_service import (
     get_todays_top_hits
 )
-
+from .services.inventory_service import (
+    get_sales_form_options,
+    get_inventory_by_category,
+)
 from .services.metrics_service import (
     compute_dashboard_metrics,
-    compute_inventory_metrics
+    compute_inventory_metrics,
 )
 
 from rest_framework.decorators import action
@@ -106,7 +109,9 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
 
         #Function Based Permissions
-        "inventory_metrics": "view_inventory"
+        "inventory_metrics": "view_inventory",
+        "sales_form_options": "view_inventory",
+        "inventory_by_category": "view_inventory"
     }
 
     def perform_create(self, serializer):
@@ -132,6 +137,27 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         set_tenant_cache(cache_key, data, 60) # Hold Data for 60 seconds
         #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
         
+        return Response(data)
+
+    # Sales Form Options [Categories, Users]
+    @action(detail=False, methods=["get"], url_path="sales_form_options")
+    def sales_form_options(self, request):
+        inventory = self.filter_queryset(self.get_queryset())
+        tenant_id = request.user.tenant.id
+        data = get_sales_form_options(inventory)
+
+        return Response(data)
+
+    @action(detail=False, methods=["get"], url_path="inventory_by_category")
+    def inventory_by_category(self, request):
+        inventory = self.filter_queryset(self.get_queryset())
+        tenant_id = request.user.tenant.id
+
+
+
+        category = request.query_params.get('category')
+        data = get_inventory_by_category(inventory, category)
+
         return Response(data)
        
 

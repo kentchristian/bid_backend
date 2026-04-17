@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
     tenant = TenantSerializer(read_only=True)
     class Meta: 
         model = User 
-        fields = ['id', 'name', 'tenant', 'role', 'is_active']
+        fields = ['id', 'name', 'email', 'tenant', 'role', 'is_active']
 
 class CategorySerializer(serializers.ModelSerializer):
   class Meta:

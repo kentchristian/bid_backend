@@ -1,6 +1,10 @@
 from django.db.models import F, Q
-from api.serializers import InventorySerializer
-
+from api.serializers import InventorySerializer, UserSerializer, CategorySerializer
+from accounts.models import User
+from storefront.models import Category
+from .users_service import (
+  get_users
+)
 
 def get_items_below_threshold(inventory):
   below_threshold = inventory.filter(
@@ -43,3 +47,35 @@ def get_inventory_health(inventory):
       "empty_stock": InventorySerializer(out_of_stocks, many=True).data,
     }    
   }
+
+
+def get_sales_form_options(inventory):
+  inventory = InventorySerializer(inventory, many=True).data
+  tenant = inventory[0]['tenant']['name']
+
+  # get user
+  users = get_users(tenant)
+
+  query_set = Category.objects.all().filter(tenant__name=tenant)
+  categories = CategorySerializer(query_set, many=True).data
+
+  return {
+    "users": users,
+    "categories": categories,
+  };
+
+
+def get_inventory_by_category(inventory, category):
+  query_set = inventory
+  if category:
+    query_set = inventory.filter(category__name=category)
+  
+  inventory = InventorySerializer(query_set, many=True).data
+  
+  return {
+    "total_items": len(inventory),
+    "inventory": inventory
+  }
+
+
+
