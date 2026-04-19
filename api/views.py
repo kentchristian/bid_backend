@@ -1,10 +1,15 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
 from storefront.models import Inventory, Sale
-from .serializers import InventorySerializer, SaleSerializer
+from .serializers import (
+    InventorySerializer, 
+    SaleSerializer, 
+    CreateSalesSerializer
+)
 from .permissions import RolePermissionRequired
+from django.db import transaction
 
 # Tenant Cache Helpers
 from .utils.tenant_cache import (
@@ -58,6 +63,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         # Function Based Permission
         "dashboard_metrics": "view_sale",
         "todays_top_hits": "view_sale",
+        "sales_transaction": "create_sale",
     }
 
     def perform_create(self, serializer):
@@ -84,14 +90,52 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
         
         return Response(data)
-       
-    
+
     @action(detail=False, methods=["get"], url_path='todays_top_hits')
     def todays_top_hits(self, request):
         sales = self.get_queryset()
         return Response({
             "todays_top_hits": get_todays_top_hits(sales),
         })
+    
+
+
+    # Create Sales 
+    @action(detail=False, methods=["post"], url_path='sales_transaction')
+    def sales_transaction(self, request):
+        #Transform data to flat_list 
+
+        sold_at = request.data.get('sold_at')
+        created_by = request.data.get('created_by')
+        items_data = request.data.get('items')
+
+        print(f"Sold at: {sold_at}")
+        print(f"Created by: {created_by}")
+
+        # inject header to every items
+        for item in items_data:
+            item['sold_at'] = sold_at
+            item['created_by'] = created_by
+
+        
+        
+        # Feed transformed data to serializer
+        serializer = CreateSalesSerializer(
+            data=items_data, 
+            many=True, 
+            context={'request': request}
+        )
+
+        # Perform validations
+        if serializer.is_valid(raise_exception=True):
+            with transaction.atomic():
+                # Map the validated data to Model instances
+                data_to_create = [Sale(**item) for item in serializer.validated_data]
+                # Perform 1 single SQL query
+                Sale.objects.bulk_create(data_to_create)
+            
+            return Response({"message": "Transaction successfully created!"}, status=status.HTTP_201_CREATED)
+       
         
 
 
