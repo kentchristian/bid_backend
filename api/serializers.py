@@ -109,17 +109,31 @@ class TodaysTopHitsSerializer(serializers.ModelSerializer):
 ### POST Serializers
 
 class CreateSalesSerializer(serializers.ModelSerializer):
-    inventory = serializers.SlugRelatedField(slug_field='id', queryset=Inventory.objects.none())
-    tenant = serializers.SlugRelatedField(slug_field='id', queryset=Tenant.objects.none())
+    inventory = serializers.SlugRelatedField(
+      slug_field='id', 
+      queryset=Inventory.objects.none()
+    )
+    tenant = serializers.SlugRelatedField(
+      slug_field='id', 
+      queryset=Tenant.objects.none()
+    )
 
     class Meta: 
         model = Sale
-        fields = ['tenant', 'inventory', 'created_by', 'quantity', 'unit_price', 'total_price', 'sold_at']
+        fields = [
+          'tenant', 
+          'inventory', 
+          'created_by', 
+          'quantity', 
+          'unit_price', 
+          'total_price', 
+          'sold_at'
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
+        request = self.context.get('request') # checs the request meta data
+        if request and hasattr(request, 'user'): # checs i user exist in request -- basically if logged in
             # SECURITY: Limit the "menu" of choices to this tenant only
             user_tenant = request.user.tenant 
             self.fields['inventory'].queryset = Inventory.objects.filter(tenant=user_tenant)
@@ -131,15 +145,15 @@ class CreateSalesSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Quantity must be greater than zero.")
         return value
 
-    # def validate(self, data):
-    #     # OBJECT-LEVEL VALIDATION: Business Logic
-    #     # Since we filtered the queryset in __init__, 'data["inventory"]' 
-    #     # is guaranteed to belong to the correct tenant already.
-    #     inventory_item = data['inventory']
+    def validate(self, data):
+        # OBJECT-LEVEL VALIDATION: Business Logic
+        # Since we filtered the queryset in __init__, 'data["inventory"]' 
+        # is guaranteed to belong to the correct tenant already.
+        inventory_item = data['inventory']
         
-    #     if data['quantity'] > inventory_item.stock:
-    #         raise serializers.ValidationError({
-    #             "quantity": f"Insufficient stock. Available: {inventory_item.stock}"
-    #         })
+        if data['quantity'] > inventory_item.stock_quantity:
+            raise serializers.ValidationError({
+                "quantity": f"Insufficient stock. Available: {inventory_item.stock_quantity}"
+            })
             
-    #     return data
+        return data

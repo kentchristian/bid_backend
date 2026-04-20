@@ -1,10 +1,12 @@
 from django.db.models import F, Q
 from api.serializers import InventorySerializer, UserSerializer, CategorySerializer
 from accounts.models import User
-from storefront.models import Category
+from storefront.models import Category, Inventory
 from .users_service import (
   get_users
+
 )
+from django.db import transaction
 
 def get_items_below_threshold(inventory):
   below_threshold = inventory.filter(
@@ -79,3 +81,25 @@ def get_inventory_by_category(inventory, category):
 
 
 
+
+
+
+
+# UPDATE -- UPDATE THE INVENTORY 
+
+
+
+# Updates Stock Quantity
+def update_inventory_stock(inventory_id, quantity_change, tenant):
+    """
+    Job: Adjust stock levels safely.
+    One Job: Math + Database Update.
+    """
+    # Use select_for_update to lock the row so two sales don't 
+    # calculate the stock at the same millisecond (Race Condition)
+    inventory = Inventory.objects.select_for_update().get(id=inventory_id, tenant=tenant)
+    
+    inventory.stock_quantity -= quantity_change
+    inventory.save(update_fields=['stock_quantity']) # Only updates this specific column
+
+    return inventory

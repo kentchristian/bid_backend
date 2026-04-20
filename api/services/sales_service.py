@@ -133,3 +133,4 @@ def get_todays_top_hits(sales):
     })
 
   return data
+

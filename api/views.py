@@ -25,6 +25,7 @@ from .services.sales_service import (
 from .services.inventory_service import (
     get_sales_form_options,
     get_inventory_by_category,
+    update_inventory_stock,
 )
 from .services.metrics_service import (
     compute_dashboard_metrics,
@@ -109,15 +110,10 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         created_by = request.data.get('created_by')
         items_data = request.data.get('items')
 
-        print(f"Sold at: {sold_at}")
-        print(f"Created by: {created_by}")
-
         # inject header to every items
         for item in items_data:
             item['sold_at'] = sold_at
             item['created_by'] = created_by
-
-        
         
         # Feed transformed data to serializer
         serializer = CreateSalesSerializer(
@@ -129,15 +125,34 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         # Perform validations
         if serializer.is_valid(raise_exception=True):
             with transaction.atomic():
-                # Map the validated data to Model instances
-                data_to_create = [Sale(**item) for item in serializer.validated_data]
-                # Perform 1 single SQL query
-                Sale.objects.bulk_create(data_to_create)
-            
-            return Response({"message": "Transaction successfully created!"}, status=status.HTTP_201_CREATED)
-       
-        
+                # 1. Bulk Create Sales
+                
+                data_to_create = [
+                    Sale(**item) for item in serializer.validated_data
+                ]
 
+                # Bulk Application
+                Sale.objects.bulk_create(data_to_create)
+                
+                # 2. Update Inventory and Collect Results
+                summary = []
+                for item in serializer.validated_data:
+                    updated_inventory = update_inventory_stock(
+                        inventory_id=item['inventory'].id,
+                        quantity_change=item['quantity'],
+                        tenant=request.user.tenant
+                    )
+                    
+                    summary.append({
+                        "product_name": updated_inventory.product_name,
+                        "quantity_sold": item['quantity'],
+                        "new_stock_level": updated_inventory.stock_quantity
+                    })
+            
+            return Response({
+                "message": "Transaction successfully created!",
+                "updates": summary
+            }, status=status.HTTP_201_CREATED)
 
 class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Inventory.objects.all()
