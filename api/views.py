@@ -108,12 +108,15 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
         sold_at = request.data.get('sold_at')
         created_by = request.data.get('created_by')
+        tenant = request.user.tenant.id
         items_data = request.data.get('items')
 
         # inject header to every items
         for item in items_data:
             item['sold_at'] = sold_at
             item['created_by'] = created_by
+            item['tenant'] = tenant
+
         
         # Feed transformed data to serializer
         serializer = CreateSalesSerializer(
@@ -184,7 +187,6 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     def inventory_metrics(self, request):
         #TODO Info -- Apply FilterBackground when scaling features, such as search and ordering
         inventory = self.filter_queryset(self.get_queryset())
-
         tenant_id = request.user.tenant.id
         
         cache_key = set_cache_key("inventory_metrics", tenant_id)
@@ -211,7 +213,6 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     def inventory_by_category(self, request):
         inventory = self.filter_queryset(self.get_queryset())
         tenant_id = request.user.tenant.id
-
 
 
         category = request.query_params.get('category')

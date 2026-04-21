@@ -68,9 +68,9 @@ def get_sales_form_options(inventory):
 
 
 def get_inventory_by_category(inventory, category):
-  query_set = inventory
+  query_set = inventory.filter(stock_quantity__gt=0) #Filter Quantity To show > 0
   if category:
-    query_set = inventory.filter(category__name=category)
+    query_set = inventory.filter(category__name=category, stock_quantity__gt=0)
   
   inventory = InventorySerializer(query_set, many=True).data
   
