@@ -49,6 +49,7 @@ class SaleSerializer(serializers.ModelSerializer):
         model = Sale
         fields = [
             "id",
+            "transaction_id",
             "tenant",
             "inventory",
             "quantity",
@@ -122,7 +123,8 @@ class CreateSalesSerializer(serializers.ModelSerializer):
         model = Sale
         fields = [
           'tenant', 
-          'inventory', 
+          'inventory',
+          'transaction_id',
           'created_by', 
           'quantity', 
           'unit_price', 

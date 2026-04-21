@@ -8,6 +8,10 @@ from django.utils import timezone
 
 from accounts.models import Tenant, User
 from storefront.models import Category, Inventory, Sale
+from storefront.management.commands._seeder_utils import (
+    assign_transaction_ids,
+    parse_transaction_group_sizes,
+)
 
 
 class Command(BaseCommand):
@@ -68,6 +72,15 @@ class Command(BaseCommand):
                 "(default: 0.04)."
             ),
         )
+        parser.add_argument(
+            "--transaction-group-sizes",
+            type=str,
+            default="5,10,20",
+            help=(
+                "Comma-separated sale-line counts to group under one transaction_id "
+                "(default: 5,10,20)."
+            ),
+        )
 
     def handle(self, *args, **options):
         inventory_total = options["inventory_total"]
@@ -78,6 +91,7 @@ class Command(BaseCommand):
         month = options["month"]
         low_stock_ratio = options["low_stock_ratio"]
         out_of_stock_ratio = options["out_of_stock_ratio"]
+        transaction_group_sizes_raw = options["transaction_group_sizes"]
 
         if inventory_total <= 0:
             raise CommandError("--inventory-total must be a positive integer.")
@@ -92,6 +106,12 @@ class Command(BaseCommand):
             raise CommandError("Stock ratios must be zero or positive.")
         if low_stock_ratio > 1 or out_of_stock_ratio > 1:
             raise CommandError("Stock ratios must be between 0 and 1.")
+        try:
+            transaction_group_sizes = parse_transaction_group_sizes(
+                transaction_group_sizes_raw
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         tenants_qs = Tenant.objects.order_by("created_at")
         if tenant_limit:
@@ -309,6 +329,12 @@ class Command(BaseCommand):
                         sold_by_inventory[inventory.id] = (
                             sold_by_inventory.get(inventory.id, 0) + quantity
                         )
+
+                    sales = assign_transaction_ids(
+                        sales,
+                        rng=rng,
+                        group_sizes=transaction_group_sizes,
+                    )
 
                     Sale.objects.bulk_create(sales, batch_size=1000)
 

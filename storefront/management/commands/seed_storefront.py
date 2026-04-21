@@ -1,5 +1,4 @@
 import random
-import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -9,6 +8,10 @@ from django.utils import timezone
 
 from accounts.models import Tenant, User
 from storefront.models import Inventory, Sale
+from storefront.management.commands._seeder_utils import (
+    assign_transaction_ids,
+    parse_transaction_group_sizes,
+)
 
 
 class Command(BaseCommand):
@@ -27,13 +30,29 @@ class Command(BaseCommand):
             default=42,
             help="Random seed for deterministic data generation (default: 42).",
         )
+        parser.add_argument(
+            "--transaction-group-sizes",
+            type=str,
+            default="5,10,20",
+            help=(
+                "Comma-separated sale-line counts to group under one transaction_id "
+                "(default: 5,10,20)."
+            ),
+        )
 
     def handle(self, *args, **options):
         per_tenant = options["per_tenant"]
         seed = options["seed"]
+        transaction_group_sizes_raw = options["transaction_group_sizes"]
 
         if per_tenant <= 0:
             raise CommandError("--per-tenant must be a positive integer.")
+        try:
+            transaction_group_sizes = parse_transaction_group_sizes(
+                transaction_group_sizes_raw
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         tenants = list(Tenant.objects.order_by("created_at")[:2])
         if len(tenants) < 2:
@@ -92,14 +111,18 @@ class Command(BaseCommand):
                                 stock_quantity=stock_quantity,
                                 max_quantity=max_quantity,
                                 reorder_threshold=reorder_threshold,
+                                unit_price=(
+                                    Decimal(random.randint(299, 49999))
+                                    / Decimal("100")
+                                ).quantize(Decimal("0.01")),
                             )
                         )
 
+                    inventories = Inventory.objects.bulk_create(inventories)
+
+                    for inventory in inventories:
                         quantity = random.randint(1, 15)
-                        unit_price_cents = random.randint(299, 49999)
-                        unit_price = (Decimal(unit_price_cents) / Decimal("100")).quantize(
-                            Decimal("0.01")
-                        )
+                        unit_price = inventory.unit_price
                         total_price = (unit_price * quantity).quantize(Decimal("0.01"))
                         sold_at = now - timedelta(
                             days=random.randint(0, 120),
@@ -109,8 +132,9 @@ class Command(BaseCommand):
 
                         sales.append(
                             Sale(
+                                transaction_id="",
                                 tenant=tenant,
-                                product_id=uuid.uuid4(),
+                                inventory=inventory,
                                 quantity=quantity,
                                 unit_price=unit_price,
                                 total_price=total_price,
@@ -119,7 +143,11 @@ class Command(BaseCommand):
                             )
                         )
 
-                    Inventory.objects.bulk_create(inventories)
+                    sales = assign_transaction_ids(
+                        sales,
+                        rng=random,
+                        group_sizes=transaction_group_sizes,
+                    )
                     Sale.objects.bulk_create(sales)
 
                 self.stdout.write(

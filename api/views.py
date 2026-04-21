@@ -107,6 +107,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         #Transform data to flat_list 
 
         sold_at = request.data.get('sold_at')
+        transaction_id = request.data.get('transaction_id')
         created_by = request.data.get('created_by')
         tenant = request.user.tenant.id
         items_data = request.data.get('items')
@@ -116,6 +117,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             item['sold_at'] = sold_at
             item['created_by'] = created_by
             item['tenant'] = tenant
+            item['transaction_id'] = transaction_id
 
         
         # Feed transformed data to serializer
@@ -154,7 +156,8 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             
             return Response({
                 "message": "Transaction successfully created!",
-                "updates": summary
+                "transaction_id": transaction_id,
+                "updates": summary,
             }, status=status.HTTP_201_CREATED)
 
 class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):

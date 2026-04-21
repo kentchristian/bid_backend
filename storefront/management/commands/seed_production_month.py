@@ -66,6 +66,15 @@ class Command(BaseCommand):
                 "(default: 0.04)."
             ),
         )
+        parser.add_argument(
+            "--transaction-group-sizes",
+            type=str,
+            default="5,10,20",
+            help=(
+                "Comma-separated sale-line counts to group under one transaction_id "
+                "(default: 5,10,20)."
+            ),
+        )
 
     def handle(self, *args, **options):
         inventory_total = options["inventory_total"]
@@ -76,6 +85,7 @@ class Command(BaseCommand):
         month = options["month"]
         low_stock_ratio = options["low_stock_ratio"]
         out_of_stock_ratio = options["out_of_stock_ratio"]
+        transaction_group_sizes = options["transaction_group_sizes"]
 
         if (year is None) != (month is None):
             raise CommandError("--year and --month must be provided together.")
@@ -97,6 +107,7 @@ class Command(BaseCommand):
             month=month,
             low_stock_ratio=low_stock_ratio,
             out_of_stock_ratio=out_of_stock_ratio,
+            transaction_group_sizes=transaction_group_sizes,
         )
 
         self.stdout.write(

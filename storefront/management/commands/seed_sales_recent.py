@@ -8,6 +8,10 @@ from django.db import transaction
 
 from accounts.models import Tenant, User
 from storefront.models import Inventory, Sale
+from storefront.management.commands._seeder_utils import (
+    assign_transaction_ids,
+    parse_transaction_group_sizes,
+)
 
 
 class Command(BaseCommand):
@@ -17,14 +21,30 @@ class Command(BaseCommand):
         parser.add_argument("--per-tenant", type=int, default=10)
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument("--tenants", type=int, default=2)
+        parser.add_argument(
+            "--transaction-group-sizes",
+            type=str,
+            default="5,10,20",
+            help=(
+                "Comma-separated sale-line counts to group under one transaction_id "
+                "(default: 5,10,20)."
+            ),
+        )
 
     def handle(self, *args, **options):
         per_tenant = options["per_tenant"]
         seed = options["seed"]
         tenant_count = options["tenants"]
+        transaction_group_sizes_raw = options["transaction_group_sizes"]
 
         if per_tenant <= 0:
             raise CommandError("--per-tenant must be positive.")
+        try:
+            transaction_group_sizes = parse_transaction_group_sizes(
+                transaction_group_sizes_raw
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         tenants = list(Tenant.objects.order_by("created_at")[:tenant_count])
         if not tenants:
@@ -68,11 +88,14 @@ class Command(BaseCommand):
                         )
                     )
 
+                inventories = Inventory.objects.bulk_create(inventories)
+
                 def build_sale(sold_at, inventory):
                     quantity = random.randint(1, 10)
                     unit_price = inventory.unit_price
                     total_price = (unit_price * quantity).quantize(Decimal("0.01"))
                     return Sale(
+                        transaction_id="",
                         tenant=tenant,
                         inventory=inventory,
                         quantity=quantity,
@@ -103,7 +126,11 @@ class Command(BaseCommand):
                         build_sale(sold_at_yesterday, random.choice(inventories))
                     )
 
-                Inventory.objects.bulk_create(inventories)
+                sales = assign_transaction_ids(
+                    sales,
+                    rng=random,
+                    group_sizes=transaction_group_sizes,
+                )
                 Sale.objects.bulk_create(sales)
 
             self.stdout.write(

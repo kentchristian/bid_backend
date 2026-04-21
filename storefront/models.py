@@ -36,6 +36,7 @@ class Inventory(models.Model):
 # ===== SALES =====
 class Sale(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transaction_id = models.CharField(max_length=255, null=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
     inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE, related_name="inventory")
     quantity = models.IntegerField()
