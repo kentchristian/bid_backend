@@ -112,7 +112,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response(cached) # Return cache if it hits match
         
         data = compute_dashboard_metrics(sales)
-        set_tenant_cache(cache_key, data, 60) # Hold Data for 30 seconds
+        set_tenant_cache(cache_key, data, 30) # Hold Data for 30 seconds
 
         return Response(data)
 
@@ -213,7 +213,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response(cached)
 
         data = get_transaction_history(sales)
-        set_tenant_cache(cache_key, data, 180)
+        set_tenant_cache(cache_key, data, 30)
 
         return Response (data)
         

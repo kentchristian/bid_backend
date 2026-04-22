@@ -142,16 +142,29 @@ def get_todays_top_hits(sales):
 def get_transaction_history(sales):
   # Distinct Transactions
   transactions = sales.values("transaction_id", "created_by", "tenant", "sold_at").distinct()
-
+  total_revenue = 0
+  units_sold = 0
 
   for item in transactions:
     # Get Tranasction
     transaction = sales.filter(**item)
     serialized = SaleSerializer(transaction, many=True).data
-    item["transacton_total"] = len(serialized)
+
+    item["items_in_transaction"] = len(serialized) # Items Total
+    total = sum(float(obj['total_price']) for obj in serialized)
+    units = sum(obj['quantity'] for obj in serialized)
+
+    units_sold += units
+    
+    total_revenue += total # Count Total Revenue sum
+    
+
+    item["overall_transaction_amount"] = total # Assign total to overall Transaction amount
     item["items"] = serialized # Append Items Serialized
 
   return {
-    "total_items": len(transactions),
+    "total_transactions": len(transactions),
+    "total_revenue": round(total_revenue, 2),
+    "units_sold": units_sold,
     "transactions": transactions,
   }
