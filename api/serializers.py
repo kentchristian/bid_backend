@@ -45,6 +45,7 @@ class InventorySerializer(serializers.ModelSerializer):
 
 class SaleSerializer(serializers.ModelSerializer):
     inventory = InventorySerializer(read_only=True)
+    created_by = UserSerializer(read_only=True)
     class Meta:
         model = Sale
         fields = [
@@ -103,7 +104,6 @@ class TodaysTopHitsSerializer(serializers.ModelSerializer):
       'total_price',
       'sold_at'
     ]
-    
 
 
 

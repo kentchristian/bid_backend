@@ -20,7 +20,8 @@ from .utils.tenant_cache import (
 
 # import service
 from .services.sales_service import (
-    get_todays_top_hits
+    get_todays_top_hits,
+    get_transaction_history
 )
 from .services.inventory_service import (
     get_sales_form_options,
@@ -34,6 +35,7 @@ from .services.metrics_service import (
 
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from dateutil import parser
 
 class TenantScopedQuerysetMixin:
     def get_tenant(self):
@@ -87,6 +89,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "dashboard_metrics": "view_sale",
         "todays_top_hits": "view_sale",
         "sales_transaction": "create_sale",
+        "transaction_history": "view_sale",
     }
 
     def perform_create(self, serializer):
@@ -127,7 +130,8 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     def sales_transaction(self, request):
         #Transform data to flat_list 
 
-        sold_at = request.data.get('sold_at')
+        sold_at = parser.parse(request.data.get('sold_at'))
+
         transaction_id = request.data.get('transaction_id')
         created_by = request.data.get('created_by')
         tenant = request.user.tenant.id
@@ -182,6 +186,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
                 [
                     "dashboard_metrics",
                     "inventory_metrics",
+                    "transaction_history", 
                 ]
             ) #TODO: Smoke Test
             
@@ -195,9 +200,23 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
 
     # Transaction History 
-    # @action(detail=False, methods=["get"], url_path='transaction_history')
-    # def transaction_history(self, request):
-    #     sales = self.filter_queryset(self.get_queryset())
+    @action(detail=False, methods=["get"], url_path='transaction_history')
+    def transaction_history(self, request):
+        sales = self.filter_queryset(self.get_queryset())
+
+        tenant_id = request.user.tenant.id
+
+        cache_key = set_cache_key('transaction_history', tenant_id)
+        cached = get_tenant_cache(cache_key)
+
+        if cached is not None:
+            return Response(cached)
+
+        data = get_transaction_history(sales)
+        set_tenant_cache(cache_key, data, 180)
+
+        return Response (data)
+        
 
 
 

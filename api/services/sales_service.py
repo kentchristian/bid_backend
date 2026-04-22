@@ -2,8 +2,12 @@
 from datetime import datetime
 from django.utils import timezone
 from api.utils.get_total_sales_specific_day import get_total_sales_specific_day
-from api.serializers import MoneyInSalesSerializer, TodaysTopHitsSerializer, InventorySerializer
-
+from api.serializers import (
+  MoneyInSalesSerializer, 
+  TodaysTopHitsSerializer, 
+  InventorySerializer,
+  SaleSerializer,
+)
 def get_total_revenue(sales):
   #Get the instance query set filtered 
   today = timezone.now().date()
@@ -134,3 +138,20 @@ def get_todays_top_hits(sales):
 
   return data
 
+
+def get_transaction_history(sales):
+  # Distinct Transactions
+  transactions = sales.values("transaction_id", "created_by", "tenant", "sold_at").distinct()
+
+
+  for item in transactions:
+    # Get Tranasction
+    transaction = sales.filter(**item)
+    serialized = SaleSerializer(transaction, many=True).data
+    item["transacton_total"] = len(serialized)
+    item["items"] = serialized # Append Items Serialized
+
+  return {
+    "total_items": len(transactions),
+    "transactions": transactions,
+  }
