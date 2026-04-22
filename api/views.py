@@ -48,6 +48,28 @@ class TenantScopedQuerysetMixin:
             return self.queryset.none()
         return self.queryset.filter(tenant=tenant)
 
+import logging
+logger = logging.getLogger(__name__)
+
+def invalidate_tenant_cache(tenant_id, service_names):
+    """
+    Clears one or more cache keys for a specific tenant.
+    service_names can be a string ("dashboard") or a list (["dashboard", "inventory"])
+    """
+    if not tenant_id:
+        return
+
+    # Convert single string to list so the loop works for both cases
+    if isinstance(service_names, str):
+        service_names = [service_names]
+
+    try:
+        keys = [set_cache_key(name, tenant_id) for name in service_names]
+        cache.delete_many(keys)
+    except Exception as e:
+        # We log the error but don't stop the user's request
+        logger.error(f"Cache invalidation failed for tenant {tenant_id}: {e}")
+
 
 class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Sale.objects.all()
@@ -88,8 +110,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         
         data = compute_dashboard_metrics(sales)
         set_tenant_cache(cache_key, data, 60) # Hold Data for 30 seconds
-        #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
-        
+
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path='todays_top_hits')
@@ -153,12 +174,32 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
                         "quantity_sold": item['quantity'],
                         "new_stock_level": updated_inventory.stock_quantity
                     })
+
+            # ---> Invalidate Caches 
+            tenant_id = request.user.tenant.id
+            invalidate_tenant_cache(
+                tenant_id,
+                [
+                    "dashboard_metrics",
+                    "inventory_metrics",
+                ]
+            ) #TODO: Smoke Test
             
             return Response({
                 "message": "Transaction successfully created!",
                 "transaction_id": transaction_id,
                 "updates": summary,
             }, status=status.HTTP_201_CREATED)
+
+        
+
+
+    # Transaction History 
+    # @action(detail=False, methods=["get"], url_path='transaction_history')
+    # def transaction_history(self, request):
+    #     sales = self.filter_queryset(self.get_queryset())
+
+
 
 class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Inventory.objects.all()
