@@ -151,8 +151,10 @@ class Command(BaseCommand):
 
                     categories = {}
                     for cat_def in category_defs:
-                        category, _ = Category.objects.get_or_create(
-                            tenant=tenant, name=cat_def["name"]
+                        category, _ = Category.objects.update_or_create(
+                            tenant=tenant,
+                            name=cat_def["name"],
+                            defaults={"color": cat_def["color"]},
                         )
                         categories[cat_def["name"]] = category
 
@@ -421,6 +423,7 @@ class Command(BaseCommand):
         return [
             {
                 "name": "Beverages",
+                "color": "#3B82F6",
                 "code": "BEV",
                 "items": [
                     "Cold Brew",
@@ -450,6 +453,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Snacks",
+                "color": "#F59E0B",
                 "code": "SNK",
                 "items": [
                     "Trail Mix",
@@ -479,6 +483,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Pantry",
+                "color": "#10B981",
                 "code": "PAN",
                 "items": [
                     "Pasta",
@@ -507,6 +512,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Household",
+                "color": "#6366F1",
                 "code": "HOU",
                 "items": [
                     "Dish Soap",
@@ -535,6 +541,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Personal Care",
+                "color": "#EC4899",
                 "code": "PER",
                 "items": [
                     "Shampoo",
@@ -561,6 +568,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Produce",
+                "color": "#22C55E",
                 "code": "PRO",
                 "items": [
                     "Apples",
@@ -588,6 +596,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Dairy",
+                "color": "#06B6D4",
                 "code": "DAI",
                 "items": [
                     "Milk",
@@ -616,6 +625,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Bakery",
+                "color": "#F97316",
                 "code": "BAK",
                 "items": [
                     "Sourdough Bread",
@@ -644,6 +654,7 @@ class Command(BaseCommand):
             },
             {
                 "name": "Frozen",
+                "color": "#0EA5E9",
                 "code": "FRO",
                 "items": [
                     "Frozen Pizza",

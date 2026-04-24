@@ -8,6 +8,7 @@ class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
+    color = models.CharField(max_length=50, null=True)
 
     class Meta:
         unique_together = ('tenant', 'name')

@@ -176,7 +176,11 @@ def get_transaction_history(sales):
 
 
 def get_overall_revenue(sales):
-  revenues_by_category = sales.values('inventory__category__name', 'tenant__name').annotate(
+  revenues_by_category = sales.values(
+    'inventory__category__name', 
+    'tenant__name',
+    'inventory__category__color',
+   ).annotate(
     overall_total=Sum('total_price')
   )
 
