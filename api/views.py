@@ -23,7 +23,8 @@ from .utils.tenant_cache import (
 # import service
 from .services.sales_service import (
     get_todays_top_hits,
-    get_transaction_history
+    get_transaction_history,
+    get_overall_revenue
 )
 from .services.inventory_service import (
     get_sales_form_options,
@@ -92,6 +93,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "todays_top_hits": "view_sale",
         "sales_transaction": "create_sale",
         "transaction_history": "view_sale",
+        "overall_revenue": "view_sale",
     }
 
     def perform_create(self, serializer):
@@ -124,7 +126,6 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         return Response({
             "todays_top_hits": get_todays_top_hits(sales),
         })
-    
 
 
     # Create Sales 
@@ -216,6 +217,14 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
         data = get_transaction_history(sales)
         set_tenant_cache(cache_key, data, 30)
+
+        return Response (data)
+    
+    @action(detail=False, methods=["get"], url_path='overall_revenue')
+    def overall_revenue(self, request):
+        sales = self.filter_queryset(self.get_queryset())
+        
+        data = get_overall_revenue(sales)
 
         return Response (data)
         

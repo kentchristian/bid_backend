@@ -8,6 +8,10 @@ from api.serializers import (
   InventorySerializer,
   SaleSerializer,
 )
+
+from django.db.models import Sum
+
+
 def get_total_revenue(sales):
   #Get the instance query set filtered 
   today = timezone.now().date()
@@ -167,4 +171,21 @@ def get_transaction_history(sales):
     "total_revenue": round(total_revenue, 2),
     "units_sold": units_sold,
     "transactions": transactions,
+  }
+
+
+
+def get_overall_revenue(sales):
+  revenues_by_category = sales.values('inventory__category__name', 'tenant__name').annotate(
+    overall_total=Sum('total_price')
+  )
+
+  overall_revenue = 0
+  for item in revenues_by_category:
+    overall_revenue += item['overall_total']
+  
+
+  return {
+    "overall_revenue": overall_revenue,
+    "revenues_by_category": revenues_by_category,
   }
