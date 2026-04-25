@@ -39,6 +39,9 @@ from .services.metrics_service import (
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from dateutil import parser
+from rest_framework import status
+
+
 
 class TenantScopedQuerysetMixin:
     def get_tenant(self):
@@ -94,6 +97,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "sales_transaction": "create_sale",
         "transaction_history": "view_sale",
         "overall_revenue": "view_sale",
+        "cancel_transaction": "edit_sale",
     }
 
     def perform_create(self, serializer):
@@ -105,7 +109,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path='dashboard_metrics')
     def dashboard_metrics(self, request):
         #TODO Info -- Apply FilterBackground when scaling features, such as search and ordering
-        sales = self.filter_queryset(self.get_queryset())
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
 
         tenant_id = request.user.tenant.id
         
@@ -122,7 +126,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path='todays_top_hits')
     def todays_top_hits(self, request):
-        sales = self.get_queryset()
+        sales = self.get_queryset().filter(is_cancelled=False)
         return Response({
             "todays_top_hits": get_todays_top_hits(sales),
         })
@@ -205,7 +209,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     # Transaction History 
     @action(detail=False, methods=["get"], url_path='transaction_history')
     def transaction_history(self, request):
-        sales = self.filter_queryset(self.get_queryset())
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
 
         tenant_id = request.user.tenant.id
 
@@ -220,13 +224,70 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
         return Response (data)
     
+    # Get Overall Revenue
     @action(detail=False, methods=["get"], url_path='overall_revenue')
     def overall_revenue(self, request):
-        sales = self.filter_queryset(self.get_queryset())
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
         
         data = get_overall_revenue(sales)
 
         return Response (data)
+    
+    # Cancel Transaction
+    @action(detail=False, methods=["patch"], url_path='cancel_transaction')
+    def cancel_transaction(self, request):
+
+        transaction_id = request.data.get('transaction_id')
+        cancel_reason = request.data.get('cancel_reason')
+
+
+        # Get Tenant ID 
+        tenant_id = request.user.tenant
+        
+        # Fetch Truth from the DB 
+        sales = self.filter_queryset(self.get_queryset()).filter(
+            transaction_id=transaction_id,
+            is_cancelled=False
+        )
+
+        # Sanity Check if Items Exist
+        if not sales.exists():
+            return Response(
+                {"error": "Transaction not found or already voided"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # if Pass performed update
+        with transaction.atomic():
+            # Individual processing for update inventory
+            for item in sales:
+                update_inventory_stock(
+                    inventory_id=item.inventory.id,
+                    quantity_change=-item.quantity, # Add Back #Expecting: (5) - (-5) = 10 becomes addition
+                    tenant=tenant_id
+                )
+
+            # 3. Status Update (Bulk Processing)
+            sales.update(is_cancelled=True)
+        
+        # Invalidate Cache 
+        invalidate_tenant_cache(
+                tenant_id,
+                [
+                    "dashboard_metrics",
+                    "inventory_metrics",
+                    "transaction_history", 
+                ]
+            ) 
+        return Response(
+            {
+                "message": "Transaction Voided",
+                "tranasction_id": transaction_id,
+            },
+            status=status.HTTP_200_OK
+        )
+
+        #TODO: fix void update when transaction or error is found 
         
 
 

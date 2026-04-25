@@ -45,6 +45,8 @@ class Sale(models.Model):
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     sold_at = models.DateTimeField()
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    is_cancelled = models.BooleanField(default=False)
+    cancel_reason = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         indexes = [
