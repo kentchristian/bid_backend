@@ -9,7 +9,9 @@ from .sales_service import (
 )
 
 from .inventory_service import (
-    get_items_below_threshold, get_inventory_health
+    get_items_below_threshold, 
+    get_inventory_health,
+    get_stock_valuation,
 )
 def compute_dashboard_metrics(sales_queryset):
   return {
@@ -22,6 +24,7 @@ def compute_dashboard_metrics(sales_queryset):
 
 def compute_inventory_metrics(inventory_queryset):
   return {
+    "stock_valuation": get_stock_valuation(inventory_queryset),
     "items_below_threshold": get_items_below_threshold(inventory_queryset),
     "inventory_health": get_inventory_health(inventory_queryset),
   }

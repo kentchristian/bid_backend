@@ -283,6 +283,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             {
                 "message": "Transaction Voided",
                 "tranasction_id": transaction_id,
+                "rows_updated": len(sales)
             },
             status=status.HTTP_200_OK
         )
@@ -330,7 +331,7 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         if cached is not None:
             return Response(cached) # Return cache if it hits match
         data = compute_inventory_metrics(inventory)
-        set_tenant_cache(cache_key, data, 60) # Hold Data for 60 seconds
+        set_tenant_cache(cache_key, data, 10) # Hold Data for 60 seconds
         #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
         
         return Response(data)

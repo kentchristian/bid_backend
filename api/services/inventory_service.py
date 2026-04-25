@@ -1,4 +1,4 @@
-from django.db.models import F, Q
+from django.db.models import F, Q, Sum, FloatField
 from api.serializers import InventorySerializer, UserSerializer, CategorySerializer
 from accounts.models import User
 from storefront.models import Category, Inventory
@@ -7,6 +7,7 @@ from .users_service import (
 
 )
 from django.db import transaction
+
 
 def get_items_below_threshold(inventory):
   below_threshold = inventory.filter(
@@ -77,6 +78,30 @@ def get_inventory_by_category(inventory, category):
   return {
     "total_items": len(inventory),
     "inventory": inventory
+  }
+
+
+def get_stock_valuation(inventory):
+  stock_inventory = inventory.filter(stock_quantity__gt=0)
+
+  inventory_by_category = inventory.values('category__name', 'category__color').annotate(
+    total_inventory_items=Sum('stock_quantity'),
+    total_inventory_revenue=Sum(
+      F('stock_quantity') * F('unit_price'), output_field=FloatField()
+    )
+  )
+  
+  totals = stock_inventory.aggregate(
+    total_inventory_items=Sum('stock_quantity'),
+    total_inventory_revenue=Sum(
+      F('stock_quantity') * F('unit_price'), output_field=FloatField()
+    )
+  )
+  
+  return {
+    "total_inventory_items":  totals['total_inventory_items'] or 0,
+    "total_inventory_revenue": round(totals['total_inventory_revenue'] or 0, 2),
+    "inventory_by_category": inventory_by_category,
   }
 
 
