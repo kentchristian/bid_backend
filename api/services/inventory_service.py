@@ -86,21 +86,21 @@ def get_stock_valuation(inventory):
 
   inventory_by_category = inventory.values('category__name', 'category__color').annotate(
     total_inventory_items=Sum('stock_quantity'),
-    total_inventory_revenue=Sum(
+    item_valuation=Sum(
       F('stock_quantity') * F('unit_price'), output_field=FloatField()
     )
   )
   
   totals = stock_inventory.aggregate(
     total_inventory_items=Sum('stock_quantity'),
-    total_inventory_revenue=Sum(
+    item_valuation=Sum(
       F('stock_quantity') * F('unit_price'), output_field=FloatField()
     )
   )
   
   return {
     "total_inventory_items":  totals['total_inventory_items'] or 0,
-    "total_inventory_revenue": round(totals['total_inventory_revenue'] or 0, 2),
+    "item_valuation": round(totals['item_valuation'] or 0, 2),
     "inventory_by_category": inventory_by_category,
   }
 
