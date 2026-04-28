@@ -2,11 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
-from storefront.models import Inventory, Sale
+from storefront.models import Inventory, Sale, Category
 from .serializers import (
     InventorySerializer, 
     SaleSerializer, 
-    CreateSalesSerializer
+    CreateSalesSerializer,
+    CategorySerializer
 )
 from .permissions import RolePermissionRequired
 from django.db import transaction
@@ -357,7 +358,23 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         return Response(data)
        
 
-    
 
+class CategoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated, RolePermissionRequired]
 
+    permission_map = {
+        "list": "view_category",
+        "retrieve": "view_category",
+        "create": "create_category",
+        "update": "edit_category",
+        "partial_update": "edit_category",
+        "destroy": "delete_category",
+    }
 
+    def perform_create(self, serializer):
+        tenant = self.get_tenant()
+        if not tenant:
+            raise PermissionDenied("Tenant is required.")
+        serializer.save(tenant=tenant)

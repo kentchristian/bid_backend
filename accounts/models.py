@@ -86,6 +86,11 @@ class Permission(models.Model):
         ("create_activity_log", "Create Activity Log"),
         ("edit_activity_log", "Edit Activity Log"),
         ("delete_activity_log", "Delete Activity Log"),
+
+        ("view_category", "View Category"),
+        ("create_category", "Create Category"),
+        ("edit_category", "Edit Category"),
+        ("delete_category", "Delete Category"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
