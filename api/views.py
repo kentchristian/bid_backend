@@ -313,12 +313,45 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "inventory_by_category": "view_inventory"
     }
 
-    def perform_create(self, serializer):
+    def _handle_category_and_tenant(self, serializer):
+        """
+        Private helper to unify the logic for both Create and Update.
+        """
         tenant = self.get_tenant()
+        tenant_id = self.request.user.tenant.id
+
+
         if not tenant:
             raise PermissionDenied("Tenant is required.")
-        serializer.save(tenant=tenant)
 
+        category_data = self.request.data.get('category')
+        
+        # We only perform the lookup if 'category' is in the request.
+        # This is important for PATCH requests where you might only update the price.
+        if 'category' in self.request.data:
+            category_ob = Category.objects.filter(
+                id=category_data,
+                tenant=tenant
+            ).first()
+            # If the category is sent but not found for this tenant, 
+            # you might want to raise an error or just save it as category=category_ob (None)
+            serializer.save(tenant=tenant, category=category_ob)
+
+            invalidate_tenant_cache(
+                tenant_id,
+                [
+                    "inventory_metrics",
+                ]
+            )
+        else:
+            # If no category in payload, just save other fields (like product_name)
+            serializer.save(tenant=tenant)
+
+    def perform_create(self, serializer):
+        self._handle_category_and_tenant(serializer)
+
+    def perform_update(self, serializer):
+        self._handle_category_and_tenant(serializer)
     
     @action(detail=False, methods=["get"], url_path="inventory_metrics")
     def inventory_metrics(self, request):

@@ -27,6 +27,7 @@ class Inventory(models.Model):
     reorder_threshold = models.IntegerField()
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     updated_at = models.DateTimeField(auto_now=True)
+    # TODO: isDeleted -- soft Delete
     
 
     class Meta:
