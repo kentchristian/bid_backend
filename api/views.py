@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+import django_filters.rest_framework
 
 from storefront.models import Inventory, Sale, Category
 from .serializers import (
@@ -13,6 +14,12 @@ from .permissions import RolePermissionRequired
 from django.db import transaction
 
 from django.core.cache import cache
+
+# Reports 
+
+from .services.reports_service import (
+    get_sales_performance_overview
+)
 
 # Tenant Cache Helpers
 from .utils.tenant_cache import (
@@ -290,6 +297,7 @@ class SaleViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         )
 
         #TODO: fix void update when transaction or error is found 
+
         
 
 
@@ -411,3 +419,51 @@ class CategoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         if not tenant:
             raise PermissionDenied("Tenant is required.")
         serializer.save(tenant=tenant)
+
+
+
+
+class ReportsViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
+    queryset = Sale.objects.all()
+    serializer_class = SaleSerializer
+    permission_classes = [IsAuthenticated, RolePermissionRequired]
+    permission_map = {
+        "list": "view_sale",
+        "retrieve": "view_sale",
+        "create": "create_sale",
+        "update": "edit_sale",
+        "partial_update": "edit_sale",
+        "destroy": "delete_sale",
+
+        "sales_performance_overview": "view_sale",
+
+
+    }
+
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    
+    # 2. Explicitly allow 'gte' and 'lte' lookups on your date field
+    filterset_fields = {
+        'sold_at': ['gte', 'lte', 'exact'], 
+    }
+
+    def perform_create(self, serializer):
+        tenant = self.get_tenant()
+        if not tenant:
+            raise PermissionDenied("Tenant is required.")
+        serializer.save(tenant=tenant, created_by=self.request.user)
+
+    
+    # Reports
+    # Sales Performance Overview
+    # Accepts Payload Month, Year, or Date Range 
+    @action(detail=False, methods=["get"], url_path='sales_performance_overview')
+    def sales_performance_overview(self, request):
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
+
+
+
+
+        data = get_sales_performance_overview(sales) 
+
+        return Response(data)
