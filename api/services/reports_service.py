@@ -3,7 +3,7 @@
 from django.db.models import Sum, DecimalField, IntegerField
 from django.db.models.functions import Coalesce
 from decimal import Decimal
-
+from django.db.models import F
 
 def get_sales_performance_overview(sales):
   # Default gets the overall Sales
@@ -33,7 +33,6 @@ def get_sales_performance_overview(sales):
         .order_by('-total_quantity')  # <--- The '-' sorts from greater to lesser (Descending)
         [:5]                          # <--- Slices the queryset to return exactly the top 5
     )
-  
 
 
   return {
@@ -43,3 +42,18 @@ def get_sales_performance_overview(sales):
   }
 
 
+
+def get_inventory_health_report(inventory):
+  # Get all inventory items where current stock is less than or equal to the threshold
+  low_stock_alerts = list(
+        inventory.filter(stock_quantity__lte=F('reorder_threshold'))
+        .values('id', 'product_name', 'stock_quantity', 'reorder_threshold')
+    )
+  return {
+    "alerts": {
+      "total_alerts": len(low_stock_alerts),
+      "low_stock_alerts": low_stock_alerts,
+      
+    }
+    
+  }

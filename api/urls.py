@@ -5,15 +5,17 @@ from .views import (
     InventoryViewSet, 
     SaleViewSet, 
     CategoryViewSet,
-    ReportsViewSet)
+    SalesReportViewSet,
+    InventoryReportViewSet
+)
 
 
 router = DefaultRouter()
 router.register("sales", SaleViewSet, basename="sale")
 router.register("inventory", InventoryViewSet, basename="inventory")
 router.register("category", CategoryViewSet, basename="category")
-router.register("reports", ReportsViewSet, basename="reports")
-
+router.register("sales_report", SalesReportViewSet, basename="sales_report")
+router.register("inventory_report", InventoryReportViewSet, basename="inventory_report")
 
 
 

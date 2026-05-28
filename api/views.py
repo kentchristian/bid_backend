@@ -18,7 +18,8 @@ from django.core.cache import cache
 # Reports 
 
 from .services.reports_service import (
-    get_sales_performance_overview
+    get_sales_performance_overview,
+    get_inventory_health_report
 )
 
 # Tenant Cache Helpers
@@ -423,7 +424,7 @@ class CategoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
 
 
 
-class ReportsViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
+class SalesReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Sale.objects.all()
     serializer_class = SaleSerializer
     permission_classes = [IsAuthenticated, RolePermissionRequired]
@@ -461,9 +462,52 @@ class ReportsViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
     def sales_performance_overview(self, request):
         sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
 
-
-
-
         data = get_sales_performance_overview(sales) 
+
+        #TODO: add caching mechanism
+
+        return Response(data)
+
+
+class InventoryReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
+    queryset = Inventory.objects.all()
+    serializer_class = InventorySerializer
+    permission_classes = [IsAuthenticated, RolePermissionRequired]
+    permission_map = {
+        "list": "view_inventory",
+        "retrieve": "view_inventory",
+        "create": "create_inventory",
+        "update": "edit_inventory",
+        "partial_update": "edit_inventory",
+        "destroy": "delete_inventory",
+
+        "inventory_health_report": "view_inventory"
+    }
+
+
+    # filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    
+    # # 2. Explicitly allow 'gte' and 'lte' lookups on your date field
+    # filterset_fields = {
+    #     'sold_at': ['gte', 'lte', 'exact'], 
+    # }
+
+    def perform_create(self, serializer):
+        tenant = self.get_tenant()
+        if not tenant:
+            raise PermissionDenied("Tenant is required.")
+        serializer.save(tenant=tenant, created_by=self.request.user)
+
+    
+    # Reports
+    # Sales Performance Overview
+    # Accepts Payload Month, Year, or Date Range 
+    @action(detail=False, methods=["get"], url_path='inventory_health_report')
+    def inventory_health_report(self, request):
+        inventory = self.filter_queryset(self.get_queryset())
+
+        data = get_inventory_health_report(inventory) 
+
+        #TODO: add caching mechanism
 
         return Response(data)
