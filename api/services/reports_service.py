@@ -5,6 +5,9 @@ from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.db.models import F
 
+from django.db.models.functions import TruncDay
+from django.utils import timezone
+
 def get_sales_performance_overview(sales):
   # Default gets the overall Sales
   totals = sales.aggregate(
@@ -75,8 +78,7 @@ def get_inventory_turnover_ratio(sales):
 
 
 def get_staff_performance_leaderboard(sales):
-  # Get Users
-  users = sales.values(
+  staff_performance = sales.values(
     employee=F('created_by__name'),
   ).annotate(
     total_transactions=Count('transaction_id', distinct=True),
@@ -85,5 +87,47 @@ def get_staff_performance_leaderboard(sales):
   )
 
   return {
-    "total_sales_revenue": users
+    "staff_performance_leaderboard": staff_performance
   }
+
+
+
+def get_monthly_sales_trend(sales, year, month):
+    """
+    Filters sales for a specific month and aggregates daily revenue 
+    along with distinct transaction counts (volume).
+    """
+    # 1. Filter the queryset for the specific year and month
+    monthly_sales = sales.filter(
+        sold_at__year=year,
+        sold_at__month=month
+    )
+    
+    # 2. Group by day and aggregate metrics
+    trend_data = (
+        monthly_sales
+        .annotate(day=TruncDay('sold_at')) # Extracts just the YYYY-MM-DD
+        .values('day')                        # Groups rows by that day
+        .annotate(
+            daily_revenue=Sum('total_price'),
+            transaction_volume=Count('transaction_id', distinct=True) # Unique checkouts
+        )
+        .order_by('day')                      # Ensures chronological order
+    )
+    
+    return trend_data
+
+
+def get_recent_transactions_report(sales):
+
+  recent_transactions = sales.values(
+    'transaction_id',
+    'sold_at',
+    employee=F('created_by__name'),
+  ).annotate(
+    items=Count('transaction_id'),
+    total_price=Sum('total_price'),
+  )
+
+  return recent_transactions
+  

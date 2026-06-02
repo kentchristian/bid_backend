@@ -22,6 +22,8 @@ from .services.reports_service import (
     get_inventory_health_report,
     get_inventory_turnover_ratio, #TODO
     get_staff_performance_leaderboard,
+    get_monthly_sales_trend,
+    get_recent_transactions_report,
 )
 
 # Tenant Cache Helpers
@@ -441,6 +443,8 @@ class SalesReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "sales_performance_overview": "view_sale",
         "inventory_turnover_ratio": "view_sale", #TODO 
         "staff_performance_leaderboard": "view_sale",
+        "monthly_sales_trend": "view_sale",
+        "recent_transactions_report": "view_sale"
 
 
     }
@@ -500,6 +504,67 @@ class SalesReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         set_tenant_cache(cache_key, data, 30) # Hold Data for 30 seconds
 
         return Response(data)
+
+
+    @action(detail=False, methods=["get"], url_path='monthly_sales_trend')
+    def monthly_sales_trend(self, request):
+
+        # 1. Grab the values from the URL query parameters using request.GET
+        year_param = request.GET.get('year')
+        month_param = request.GET.get('month')
+
+        # 2. Add validation fallback so your API doesn't crash if they are missing
+        if not year_param or not month_param:
+            return Response(
+                {"error": "Missing parameters. Please provide both '?year=' and '?month=' in the URL."}, 
+                status = status.HTTP_404_NOT_FOUND
+            )
+        try:
+            # 3. URL parameters are always strings, so cast them to integers for the database
+            year = int(year_param)
+            month = int(month_param)
+
+
+        except ValueError:
+            return Response(
+                {"error": "Invalid parameter format. Year and month must be integers."}, 
+                status = status.HTTP_404_NOT_FOUND
+            )
+
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
+
+        # tenant_id = request.user.tenant.id
+        
+        # cache_key = set_cache_key("staff_performance_leaderboard_cache", tenant_id)
+        # cached = get_tenant_cache(cache_key)
+
+        # if cached is not None:
+        #     return Response(cached) # Return cache if it hits match
+        
+        data = get_monthly_sales_trend(sales, year, month)
+        # set_tenant_cache(cache_key, data, 30) # Hold Data for 30 seconds
+
+        return Response(data)
+
+    
+    @action(detail=False, methods=["get"], url_path='recent_transactions_report')
+    def recent_transactions_report(self, request):
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
+
+        # tenant_id = request.user.tenant.id
+        
+        # cache_key = set_cache_key("recent_transactions_report_cache", tenant_id)
+        # cached = get_tenant_cache(cache_key)
+
+        # if cached is not None:
+        #     return Response(cached) # Return cache if it hits match
+        
+        data = get_recent_transactions_report(sales)
+        # set_tenant_cache(cache_key, data, 30) # Hold Data for 30 seconds
+
+        return Response(data)
+    
+    
     
     
 
@@ -546,3 +611,5 @@ class InventoryReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         #TODO: add caching mechanism
 
         return Response(data)
+
+    
