@@ -1,6 +1,6 @@
 
 
-from django.db.models import Sum, DecimalField, IntegerField
+from django.db.models import Sum, Count, DecimalField, IntegerField
 from django.db.models.functions import Coalesce
 from decimal import Decimal
 from django.db.models import F
@@ -56,4 +56,34 @@ def get_inventory_health_report(inventory):
       
     }
     
+  }
+
+
+
+# TODO: New Feature 
+def get_inventory_turnover_ratio(sales):
+  # get units sold per product and price per unit
+  units_sold = sales.values(
+    'inventory__product_name', 
+   ).annotate(
+    units_sold=Sum('quantity')
+  )
+
+  return {
+    "units_sold": units_sold
+  }
+
+
+def get_staff_performance_leaderboard(sales):
+  # Get Users
+  users = sales.values(
+    employee=F('created_by__name'),
+  ).annotate(
+    total_transactions=Count('transaction_id', distinct=True),
+    total_sales_revenue=Sum('total_price'),
+    
+  )
+
+  return {
+    "total_sales_revenue": users
   }

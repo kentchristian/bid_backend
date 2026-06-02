@@ -19,7 +19,9 @@ from django.core.cache import cache
 
 from .services.reports_service import (
     get_sales_performance_overview,
-    get_inventory_health_report
+    get_inventory_health_report,
+    get_inventory_turnover_ratio, #TODO
+    get_staff_performance_leaderboard,
 )
 
 # Tenant Cache Helpers
@@ -375,7 +377,7 @@ class InventoryViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response(cached) # Return cache if it hits match
         data = compute_inventory_metrics(inventory)
         set_tenant_cache(cache_key, data, 10) # Hold Data for 60 seconds
-        #TODO: Invalidate cache on Create, Update, Delete Sales | Inventory 
+        
         
         return Response(data)
 
@@ -437,6 +439,8 @@ class SalesReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         "destroy": "delete_sale",
 
         "sales_performance_overview": "view_sale",
+        "inventory_turnover_ratio": "view_sale", #TODO 
+        "staff_performance_leaderboard": "view_sale",
 
 
     }
@@ -467,6 +471,37 @@ class SalesReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
         #TODO: add caching mechanism
 
         return Response(data)
+    
+    # TODO: Main Data From Sales 
+    # @action(detail=False, methods=["get"], url_path='inventory_turnover_ratio')
+    # def inventory_turnover_ratio(self, request):
+    #     sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
+
+    #     data = get_inventory_turnover_ratio(sales) 
+
+    #     #TODO: add caching mechanism
+
+    #     return Response(data)
+
+
+    @action(detail=False, methods=["get"], url_path='staff_performance_leaderboard')
+    def staff_performance_leaderboard(self, request):
+        sales = self.filter_queryset(self.get_queryset()).filter(is_cancelled=False)
+
+        tenant_id = request.user.tenant.id
+        
+        cache_key = set_cache_key("staff_performance_leaderboard_cache", tenant_id)
+        cached = get_tenant_cache(cache_key)
+
+        if cached is not None:
+            return Response(cached) # Return cache if it hits match
+        
+        data = get_staff_performance_leaderboard(sales)
+        set_tenant_cache(cache_key, data, 30) # Hold Data for 30 seconds
+
+        return Response(data)
+    
+    
 
 
 class InventoryReportViewSet(TenantScopedQuerysetMixin, viewsets.ModelViewSet):
