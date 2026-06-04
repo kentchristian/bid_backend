@@ -12,9 +12,10 @@ class TenantSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     tenant = TenantSerializer(read_only=True)
+    role_name = serializers.CharField(source='role.name', read_only=True)
     class Meta: 
         model = User 
-        fields = ['id', 'name', 'email', 'tenant', 'role', 'is_active']
+        fields = ['id', 'name', 'email', 'tenant',  'role', 'role_name', 'is_active']
 
 class CategorySerializer(serializers.ModelSerializer):
   class Meta:
