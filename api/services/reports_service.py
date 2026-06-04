@@ -79,6 +79,7 @@ def get_inventory_turnover_ratio(sales):
 
 def get_staff_performance_leaderboard(sales):
   staff_performance = sales.values(
+    staff_id=F('created_by__id'),
     employee=F('created_by__name'),
   ).annotate(
     total_transactions=Count('transaction_id', distinct=True),
