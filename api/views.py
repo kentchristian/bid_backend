@@ -56,6 +56,50 @@ from rest_framework import status
 
 
 
+import json
+from django.http import JsonResponse
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+from .services.ai_services import convert_text_to_structured_data
+
+class AIAssistantViewSet(viewsets.ViewSet):
+    """
+    A ViewSet to handle AI-powered type conversions.
+    """
+    
+    @action(detail=False, methods=['post'], url_path='process-ai')
+    def process_ai(self, request):
+        try:
+            # DRF automatically parses JSON input into request.data
+            raw_text = request.data.get("text", "")
+            
+            if not raw_text:
+                return Response(
+                    {"status": "error", "message": "No text provided"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Call your Groq service
+            ai_json_response = convert_text_to_structured_data(raw_text)
+            
+            # Parse string back to python dict safely
+            structured_data = json.loads(ai_json_response)
+            
+            return Response({
+                "status": "success", 
+                "data": structured_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"status": "error", "message": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
 class TenantScopedQuerysetMixin:
     def get_tenant(self):
         user = self.request.user

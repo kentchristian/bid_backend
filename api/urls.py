@@ -6,7 +6,8 @@ from .views import (
     SaleViewSet, 
     CategoryViewSet,
     SalesReportViewSet,
-    InventoryReportViewSet
+    InventoryReportViewSet,
+    AIAssistantViewSet
 )
 
 
@@ -16,6 +17,7 @@ router.register("inventory", InventoryViewSet, basename="inventory")
 router.register("category", CategoryViewSet, basename="category")
 router.register("sales_report", SalesReportViewSet, basename="sales_report")
 router.register("inventory_report", InventoryReportViewSet, basename="inventory_report")
+router.register('ai', AIAssistantViewSet, basename='ai_assistant')
 
 
 
