@@ -57,12 +57,21 @@ from rest_framework import status
 
 
 import json
-from django.http import JsonResponse
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
-from .services.ai_services import convert_text_to_structured_data
+from .services.ai_services import (
+    AIServiceError,
+    MODEL_REGISTRY,
+    convert_text_to_structured_data,
+    compile_natural_language_query,
+    coerce_decimal_values,
+    generate_answer_from_results,
+    is_dynamic_field_comparison,
+    resolve_dynamic_condition_value,
+    validate_query_payload,
+)
 
 class AIAssistantViewSet(viewsets.ViewSet):
     """
@@ -98,7 +107,111 @@ class AIAssistantViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+from django.db.models import F
 
+class AIPrompterViewSet(viewsets.ViewSet):
+    """
+    A ViewSet to handle AI-powered natural language query compilation and execution.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['post'], url_path='ai_prompter')
+    def ai_prompter(self, request):
+        try:
+            # 1. Grab raw text from the parsed JSON body payload
+            raw_text = request.data.get("text", "").strip()
+            
+            if not raw_text:
+                return Response(
+                    {"error": "The 'text' field is required in the request body."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 2. Safely capture the active tenant ID from your middleware
+            # (Falling back to an explicit tenant attribute if your middleware varies)
+            tenant = getattr(request.user, "tenant", None)
+            
+            if not tenant:
+                return Response(
+                    {"error": "Tenant context could not be identified."}, 
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # 3. Send text to the AI compiler layer and validate it against model metadata.
+            ai_payload = validate_query_payload(compile_natural_language_query(raw_text))
+
+            # 4. Pull target Model from the registry map securely
+            TargetModel = MODEL_REGISTRY.get(ai_payload.target_model)
+            if not TargetModel:
+                return Response(
+                    {"error": f"Model '{ai_payload.target_model}' is invalid or inaccessible."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # 5. Build optimized base QuerySet strictly isolated by Tenant
+            query_conditions = {}
+            field_comparisons = {}
+            for key, value in ai_payload.where_conditions.items():
+                if is_dynamic_field_comparison(key, value):
+                    field_comparisons[key] = F("reorder_threshold")
+                else:
+                    query_conditions[key] = resolve_dynamic_condition_value(key, value)
+
+            queryset = TargetModel.objects.all()
+            if ai_payload.target_model == "Tenant":
+                queryset = queryset.filter(id=tenant.id)
+            else:
+                queryset = queryset.filter(tenant_id=tenant.id)
+
+            if query_conditions:
+                queryset = queryset.filter(**query_conditions)
+            if field_comparisons:
+                queryset = queryset.filter(**field_comparisons)
+
+            # 6. Apply runtime SQL Eager Loading joins based on Pydantic output
+            if ai_payload.select_related:
+                queryset = queryset.select_related(*ai_payload.select_related)
+                
+            if ai_payload.prefetch_related:
+                queryset = queryset.prefetch_related(*ai_payload.prefetch_related)
+
+            # 7. Convert the model instances to dictionary objects natively without serializers
+            results_data = coerce_decimal_values(list(queryset.values()[:ai_payload.limit]))
+            answer = generate_answer_from_results(raw_text, ai_payload, results_data)
+            
+            # Return standard DRF Response structure
+            return Response(
+                {
+                    "answer": answer,
+                    "explanation": ai_payload.explanation,
+                    "target_model": ai_payload.target_model,
+                    "count": len(results_data),
+                    "data": results_data,
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except AIServiceError as e:
+            return Response(
+                {
+                    "error": "Failed to understand the AI prompt.",
+                    "details": str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            # Catching parsing issues or database column mismatch hiccups safely
+            return Response(
+                {
+                    "error": "Failed to compile or execute AI query.",
+                    "details": str(e)
+                }, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+########################### 
 
 class TenantScopedQuerysetMixin:
     def get_tenant(self):

@@ -7,7 +7,8 @@ from .views import (
     CategoryViewSet,
     SalesReportViewSet,
     InventoryReportViewSet,
-    AIAssistantViewSet
+    AIAssistantViewSet,
+    AIPrompterViewSet,
 )
 
 
@@ -17,7 +18,10 @@ router.register("inventory", InventoryViewSet, basename="inventory")
 router.register("category", CategoryViewSet, basename="category")
 router.register("sales_report", SalesReportViewSet, basename="sales_report")
 router.register("inventory_report", InventoryReportViewSet, basename="inventory_report")
-router.register('ai', AIAssistantViewSet, basename='ai_assistant')
+router.register("ai_assistant", AIAssistantViewSet, basename="ai_assistant")
+router.register("ai_assisant", AIAssistantViewSet, basename="ai_assistant_legacy")
+router.register("ai_prompter", AIPrompterViewSet, basename="ai_prompter")
+router.register("bim_prompter", AIPrompterViewSet, basename="bim_prompter_legacy")
 
 
 
